@@ -74,6 +74,29 @@ No buttons, no nav. Three verbs:
 
 Deep links for QA: append `#t=3.5` (0–6) to land at any scroll position.
 
+## Wallpaper Engine
+
+`wallpaper.html` is a second, static entry — the same ray tracer as a
+desktop live wallpaper: no scroll narrative, a perpetually drifting
+camera (the companion star still slides behind the hole once per orbit,
+so an Einstein ring recurs on your desktop), plus an optional clock,
+mouse parallax and a fading mouse trail.
+
+Build once, and `dist/` is a complete Wallpaper Engine project — the
+included `project.json` points at `wallpaper.html`:
+
+```sh
+npm run build
+# copy dist/ to:  <Steam>/steamapps/common/wallpaper_engine/projects/myprojects/schwarzschild
+```
+
+Settings live in two equivalent places: Wallpaper Engine's own property
+panel (View / Clock / Date / Mouse parallax / Mouse trail / Orbit drift /
+Quality), or — with mouse input enabled — a hidden hotspot in the top-right
+corner of the screen (a corner bracket appears on hover) that slides out
+the in-page panel. Choices persist via localStorage. In a browser, the
+same page is at `/wallpaper.html`.
+
 ## Layout of the code
 
     src/physics/constants.ts   shared truth: radii, profiles, g-factor

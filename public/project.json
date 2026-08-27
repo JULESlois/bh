@@ -1,0 +1,50 @@
+{
+  "contentrating": "Everyone",
+  "title": "SCHWARZSCHILD",
+  "description": "A general-relativistic black hole, ray-traced live on your GPU: every pixel integrates the Schwarzschild geodesic equation. Clock, mouse parallax and trail options — or click the hidden top-right corner for the in-page settings panel.",
+  "file": "wallpaper.html",
+  "type": "web",
+  "tags": ["Space", "Abstract"],
+  "general": {
+    "properties": {
+      "view": {
+        "order": 100,
+        "text": "View",
+        "type": "combo",
+        "value": "0",
+        "options": [
+          { "label": "Signature", "value": "0" },
+          { "label": "Edge-on", "value": "1" },
+          { "label": "Photon ring", "value": "2" },
+          { "label": "Wide", "value": "3" }
+        ]
+      },
+      "clock": {
+        "order": 101,
+        "text": "Clock",
+        "type": "combo",
+        "value": "24",
+        "options": [
+          { "label": "Off", "value": "off" },
+          { "label": "24-hour", "value": "24" },
+          { "label": "12-hour", "value": "12" }
+        ]
+      },
+      "showdate": { "order": 102, "text": "Date", "type": "bool", "value": true },
+      "parallax": { "order": 103, "text": "Mouse parallax", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "trail": { "order": 104, "text": "Mouse trail", "type": "bool", "value": false },
+      "drift": { "order": 105, "text": "Orbit drift", "type": "slider", "value": 45, "min": 0, "max": 100 },
+      "quality": {
+        "order": 106,
+        "text": "Quality",
+        "type": "combo",
+        "value": "auto",
+        "options": [
+          { "label": "Auto", "value": "auto" },
+          { "label": "Eco", "value": "eco" },
+          { "label": "Max", "value": "max" }
+        ]
+      }
+    }
+  }
+}
