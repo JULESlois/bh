@@ -11,16 +11,32 @@
 
 .wp-clock {
   position: fixed;
-  left: clamp(26px, 5vw, 84px);
-  bottom: clamp(26px, 6vh, 76px);
   z-index: 5;
   pointer-events: none;
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.65);
+  --acc: var(--cyan);
 }
+.wp-clock.ac-ember { --acc: var(--ember); }
+.wp-clock.ac-mono { --acc: var(--ink); }
+
+/* positions */
+.wp-clock.p-bl { left: clamp(26px, 5vw, 84px); bottom: clamp(26px, 6vh, 76px); }
+.wp-clock.p-br { right: clamp(26px, 5vw, 84px); bottom: clamp(26px, 6vh, 76px); text-align: right; }
+.wp-clock.p-tl { left: clamp(26px, 5vw, 84px); top: clamp(26px, 6vh, 76px); }
+.wp-clock.p-tr { right: clamp(70px, 7vw, 110px); top: clamp(26px, 6vh, 76px); text-align: right; }
+.wp-clock.p-bc { left: 50%; bottom: clamp(26px, 6vh, 76px); transform: translateX(-50%); text-align: center; }
+
 .wp-clock .t {
   font: 500 clamp(40px, 5.4vw, 72px) / 1 var(--font-m);
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
   color: var(--ink);
+}
+.wp-clock.sz-s .t { font-size: clamp(26px, 3.2vw, 42px); }
+.wp-clock.sz-l .t { font-size: clamp(54px, 8vw, 116px); }
+.wp-clock .t .col {
+  color: var(--acc);
+  transition: opacity 0.12s;
 }
 .wp-clock .t i {
   font-style: normal;
@@ -31,10 +47,46 @@
 }
 .wp-clock .d {
   margin-top: 9px;
-  font-size: 11px;
+  font-size: 10.5px;
   letter-spacing: 0.32em;
   text-transform: uppercase;
   color: var(--dim);
+}
+
+/* hud style: bracketed instrument with a sweeping seconds bar */
+.wp-clock.st-hud {
+  padding: 16px 20px 14px;
+}
+.wp-clock.st-hud::before,
+.wp-clock.st-hud::after {
+  content: '';
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  opacity: 0.85;
+}
+.wp-clock.st-hud::before {
+  top: 0;
+  left: 0;
+  border-top: 1px solid var(--acc);
+  border-left: 1px solid var(--acc);
+}
+.wp-clock.st-hud::after {
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid var(--acc);
+  border-right: 1px solid var(--acc);
+}
+.wp-clock .sbar {
+  margin-top: 12px;
+  height: 2px;
+  background: rgba(232, 228, 220, 0.13);
+}
+.wp-clock .sbar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--acc);
 }
 
 /* hidden hotspot: invisible until hovered, then a corner bracket */
@@ -120,7 +172,16 @@
   text-transform: uppercase;
   font-size: 16px;
   letter-spacing: 0.03em;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+}
+.wp-panel .wp-sec {
+  margin: 10px 0 5px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(232, 228, 220, 0.09);
+  font-size: 8px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgba(232, 228, 220, 0.4);
 }
 .wp-panel .wrow {
   display: flex;

@@ -188,6 +188,8 @@ export class Renderer {
     gl.uniform3fv(this.loc(s, 'uCompanionDir'), p.companionDir)
     gl.uniform1i(this.loc(s, 'uSteps'), steps)
     gl.uniform1f(this.loc(s, 'uStepScale'), stepScale)
+    // angular size of one internal pixel — keeps star PSFs pixel-locked
+    gl.uniform1f(this.loc(s, 'uPixAng'), (2 * p.tanHalfFov) / this.scene.h)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
     // ---- bright pass into quarter-res bloomA

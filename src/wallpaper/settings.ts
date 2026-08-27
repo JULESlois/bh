@@ -9,7 +9,14 @@ export interface WpSettings {
   /** camera preset: 0 signature · 1 edge-on · 2 photon ring · 3 wide */
   view: number
   clock: 'off' | '24' | '12'
+  clockStyle: 'hud' | 'minimal'
+  clockPos: 'bl' | 'bc' | 'br' | 'tl' | 'tr'
+  clockSize: 's' | 'm' | 'l'
+  seconds: boolean
   date: boolean
+  accent: 'cyan' | 'ember' | 'mono'
+  /** 0..1 — star field richness */
+  stars: number
   /** 0..1 */
   parallax: number
   trail: boolean
@@ -21,7 +28,13 @@ export interface WpSettings {
 export const DEFAULTS: WpSettings = {
   view: 0,
   clock: '24',
+  clockStyle: 'hud',
+  clockPos: 'bl',
+  clockSize: 'm',
+  seconds: true,
   date: true,
+  accent: 'cyan',
+  stars: 0.5,
   parallax: 0.5,
   trail: false,
   drift: 0.45,
@@ -70,6 +83,25 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
         const c = String(props.clock.value)
         if (c === 'off' || c === '24' || c === '12') patch.clock = c
       }
+      if (props.clockstyle?.value !== undefined) {
+        const v = String(props.clockstyle.value)
+        if (v === 'hud' || v === 'minimal') patch.clockStyle = v
+      }
+      if (props.clockpos?.value !== undefined) {
+        const v = String(props.clockpos.value)
+        if (['bl', 'bc', 'br', 'tl', 'tr'].includes(v)) patch.clockPos = v as WpSettings['clockPos']
+      }
+      if (props.clocksize?.value !== undefined) {
+        const v = String(props.clocksize.value)
+        if (v === 's' || v === 'm' || v === 'l') patch.clockSize = v
+      }
+      if (props.seconds?.value !== undefined) patch.seconds = !!props.seconds.value
+      if (props.accent?.value !== undefined) {
+        const v = String(props.accent.value)
+        if (v === 'cyan' || v === 'ember' || v === 'mono') patch.accent = v
+      }
+      if (props.stars?.value !== undefined)
+        patch.stars = Math.min(Math.max(Number(props.stars.value) / 100, 0), 1)
       if (props.showdate?.value !== undefined) patch.date = !!props.showdate.value
       if (props.parallax?.value !== undefined)
         patch.parallax = Math.min(Math.max(Number(props.parallax.value) / 100, 0), 1)

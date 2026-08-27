@@ -30,12 +30,59 @@
           { "label": "12-hour", "value": "12" }
         ]
       },
-      "showdate": { "order": 102, "text": "Date", "type": "bool", "value": true },
-      "parallax": { "order": 103, "text": "Mouse parallax", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "trail": { "order": 104, "text": "Mouse trail", "type": "bool", "value": false },
-      "drift": { "order": 105, "text": "Orbit drift", "type": "slider", "value": 45, "min": 0, "max": 100 },
+      "clockstyle": {
+        "order": 102,
+        "text": "Clock style",
+        "type": "combo",
+        "value": "hud",
+        "options": [
+          { "label": "HUD", "value": "hud" },
+          { "label": "Minimal", "value": "minimal" }
+        ]
+      },
+      "clockpos": {
+        "order": 103,
+        "text": "Clock position",
+        "type": "combo",
+        "value": "bl",
+        "options": [
+          { "label": "Top left", "value": "tl" },
+          { "label": "Top right", "value": "tr" },
+          { "label": "Bottom left", "value": "bl" },
+          { "label": "Bottom center", "value": "bc" },
+          { "label": "Bottom right", "value": "br" }
+        ]
+      },
+      "clocksize": {
+        "order": 104,
+        "text": "Clock size",
+        "type": "combo",
+        "value": "m",
+        "options": [
+          { "label": "Small", "value": "s" },
+          { "label": "Medium", "value": "m" },
+          { "label": "Large", "value": "l" }
+        ]
+      },
+      "seconds": { "order": 105, "text": "Seconds", "type": "bool", "value": true },
+      "showdate": { "order": 106, "text": "Date", "type": "bool", "value": true },
+      "accent": {
+        "order": 107,
+        "text": "Accent",
+        "type": "combo",
+        "value": "cyan",
+        "options": [
+          { "label": "Cyan", "value": "cyan" },
+          { "label": "Ember", "value": "ember" },
+          { "label": "Mono", "value": "mono" }
+        ]
+      },
+      "stars": { "order": 108, "text": "Star field", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "parallax": { "order": 109, "text": "Mouse parallax", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "trail": { "order": 110, "text": "Mouse trail", "type": "bool", "value": false },
+      "drift": { "order": 111, "text": "Orbit drift", "type": "slider", "value": 45, "min": 0, "max": 100 },
       "quality": {
-        "order": 106,
+        "order": 112,
         "text": "Quality",
         "type": "combo",
         "value": "auto",

@@ -46,8 +46,11 @@ function Seg(props: {
 export default function Wallpaper() {
   const glRef = useRef<HTMLCanvasElement>(null)
   const trailRef = useRef<HTMLCanvasElement>(null)
-  const timeRef = useRef<HTMLSpanElement>(null)
+  const hRef = useRef<HTMLSpanElement>(null)
+  const mRef = useRef<HTMLSpanElement>(null)
+  const colRef = useRef<HTMLSpanElement>(null)
   const secRef = useRef<HTMLElement>(null)
+  const barRef = useRef<HTMLElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
   const rendererRef = useRef<Renderer | null>(null)
   const [s, setS] = useState<WpSettings>(load)
@@ -115,7 +118,7 @@ export default function Wallpaper() {
       fov: PRESETS[sRef.current.view].fov,
       expo: PRESETS[sRef.current.view].expo,
       lastSec: -1,
-      lastClockMode: '',
+      lastClockKey: '',
     }
     const trail: { x: number; y: number; t: number }[] = []
 
@@ -185,7 +188,7 @@ export default function Wallpaper() {
         tanHalfFov: thf,
         time: st.clock * TIME_SCALE,
         diskGain: 1,
-        starGain: 1,
+        starGain: 0.25 + 1.5 * set.stars,
         falseColor: 0,
         exposure: st.expo,
         markPhoton: 0,
@@ -193,26 +196,39 @@ export default function Wallpaper() {
         companionDir: compDir,
       })
 
-      // clock — re-render text only when the second flips
+      // clock — bar and colon every frame, text only when the second flips
       if (set.clock !== 'off') {
         const d = new Date()
+        const ms = d.getMilliseconds()
         const cs = d.getSeconds()
-        if (cs !== st.lastSec || set.clock !== st.lastClockMode) {
+        if (colRef.current)
+          colRef.current.style.opacity =
+            set.clockStyle === 'hud' && ms >= 500 ? '0.22' : '1'
+        if (barRef.current)
+          barRef.current.style.width = `${(((cs + ms / 1000) / 60) * 100).toFixed(2)}%`
+        const key = `${set.clock}|${set.seconds}|${set.clockStyle}|${set.date}`
+        if (cs !== st.lastSec || key !== st.lastClockKey) {
           st.lastSec = cs
-          st.lastClockMode = set.clock
+          st.lastClockKey = key
           const mm = String(d.getMinutes()).padStart(2, '0')
-          const ss = String(cs).padStart(2, '0')
+          const ss = set.seconds ? `:${String(cs).padStart(2, '0')}` : ''
+          const hr = d.getHours()
           if (set.clock === '24') {
-            if (timeRef.current)
-              timeRef.current.textContent = `${String(d.getHours()).padStart(2, '0')}:${mm}`
-            if (secRef.current) secRef.current.textContent = `:${ss}`
+            if (hRef.current) hRef.current.textContent = String(hr).padStart(2, '0')
+            if (secRef.current) secRef.current.textContent = ss
           } else {
-            const h = d.getHours()
-            if (timeRef.current) timeRef.current.textContent = `${((h + 11) % 12) + 1}:${mm}`
-            if (secRef.current) secRef.current.textContent = `:${ss} ${h < 12 ? 'AM' : 'PM'}`
+            if (hRef.current) hRef.current.textContent = String(((hr + 11) % 12) + 1)
+            if (secRef.current) secRef.current.textContent = `${ss} ${hr < 12 ? 'AM' : 'PM'}`
           }
-          if (dateRef.current)
-            dateRef.current.textContent = `${DAYS[d.getDay()]} · ${MONTHS[d.getMonth()]} ${d.getDate()}`
+          if (mRef.current) mRef.current.textContent = mm
+          if (dateRef.current) {
+            const doy = Math.floor(
+              (d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 864e5,
+            )
+            dateRef.current.textContent =
+              `${DAYS[d.getDay()]} · ${MONTHS[d.getMonth()]} ${d.getDate()}` +
+              (set.clockStyle === 'hud' ? ` · DOY ${doy}` : '')
+          }
         }
       }
 
@@ -253,11 +269,22 @@ export default function Wallpaper() {
       <canvas className="wp-trail" ref={trailRef} />
 
       {s.clock !== 'off' && (
-        <div className="wp-clock">
+        <div
+          className={`wp-clock p-${s.clockPos} sz-${s.clockSize} ac-${s.accent} st-${s.clockStyle}`}
+        >
           <div className="t">
-            <span ref={timeRef} />
+            <span ref={hRef} />
+            <span className="col" ref={colRef}>
+              :
+            </span>
+            <span ref={mRef} />
             <i ref={secRef} />
           </div>
+          {s.clockStyle === 'hud' && (
+            <div className="sbar">
+              <i ref={barRef} />
+            </div>
+          )}
           {s.date && <div className="d" ref={dateRef} />}
         </div>
       )}
@@ -276,6 +303,8 @@ export default function Wallpaper() {
 
       <aside className={`wp-panel${open ? ' open' : ''}`}>
         <div className="ht">Settings</div>
+
+        <div className="wp-sec">scene</div>
         <div className="wrow">
           <dt>view</dt>
           <Seg
@@ -290,30 +319,25 @@ export default function Wallpaper() {
           />
         </div>
         <div className="wrow">
-          <dt>clock</dt>
-          <Seg
-            cur={s.clock}
-            opts={[
-              ['off', 'off'],
-              ['24', '24h'],
-              ['12', '12h'],
-            ]}
-            on={(v) => setS({ ...s, clock: v as WpSettings['clock'] })}
+          <dt>stars</dt>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={pct(s.stars)}
+            onChange={(e) => setS({ ...s, stars: Number(e.target.value) / 100 })}
           />
         </div>
-        {s.clock !== 'off' && (
-          <div className="wrow">
-            <dt>date</dt>
-            <Seg
-              cur={s.date ? 'on' : 'off'}
-              opts={[
-                ['off', 'hide'],
-                ['on', 'show'],
-              ]}
-              on={(v) => setS({ ...s, date: v === 'on' })}
-            />
-          </div>
-        )}
+        <div className="wrow">
+          <dt>drift</dt>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={pct(s.drift)}
+            onChange={(e) => setS({ ...s, drift: Number(e.target.value) / 100 })}
+          />
+        </div>
         <div className="wrow">
           <dt>parallax</dt>
           <input
@@ -336,16 +360,6 @@ export default function Wallpaper() {
           />
         </div>
         <div className="wrow">
-          <dt>drift</dt>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={pct(s.drift)}
-            onChange={(e) => setS({ ...s, drift: Number(e.target.value) / 100 })}
-          />
-        </div>
-        <div className="wrow">
           <dt>quality</dt>
           <Seg
             cur={s.quality}
@@ -357,6 +371,95 @@ export default function Wallpaper() {
             on={(v) => setS({ ...s, quality: v as WpSettings['quality'] })}
           />
         </div>
+
+        <div className="wp-sec">clock</div>
+        <div className="wrow">
+          <dt>mode</dt>
+          <Seg
+            cur={s.clock}
+            opts={[
+              ['off', 'off'],
+              ['24', '24h'],
+              ['12', '12h'],
+            ]}
+            on={(v) => setS({ ...s, clock: v as WpSettings['clock'] })}
+          />
+        </div>
+        {s.clock !== 'off' && (
+          <>
+            <div className="wrow">
+              <dt>style</dt>
+              <Seg
+                cur={s.clockStyle}
+                opts={[
+                  ['hud', 'hud'],
+                  ['minimal', 'minimal'],
+                ]}
+                on={(v) => setS({ ...s, clockStyle: v as WpSettings['clockStyle'] })}
+              />
+            </div>
+            <div className="wrow">
+              <dt>position</dt>
+              <Seg
+                cur={s.clockPos}
+                opts={[
+                  ['tl', 'tl'],
+                  ['tr', 'tr'],
+                  ['bl', 'bl'],
+                  ['bc', 'bc'],
+                  ['br', 'br'],
+                ]}
+                on={(v) => setS({ ...s, clockPos: v as WpSettings['clockPos'] })}
+              />
+            </div>
+            <div className="wrow">
+              <dt>size</dt>
+              <Seg
+                cur={s.clockSize}
+                opts={[
+                  ['s', 's'],
+                  ['m', 'm'],
+                  ['l', 'l'],
+                ]}
+                on={(v) => setS({ ...s, clockSize: v as WpSettings['clockSize'] })}
+              />
+            </div>
+            <div className="wrow">
+              <dt>seconds</dt>
+              <Seg
+                cur={s.seconds ? 'on' : 'off'}
+                opts={[
+                  ['off', 'off'],
+                  ['on', 'on'],
+                ]}
+                on={(v) => setS({ ...s, seconds: v === 'on' })}
+              />
+            </div>
+            <div className="wrow">
+              <dt>date</dt>
+              <Seg
+                cur={s.date ? 'on' : 'off'}
+                opts={[
+                  ['off', 'hide'],
+                  ['on', 'show'],
+                ]}
+                on={(v) => setS({ ...s, date: v === 'on' })}
+              />
+            </div>
+            <div className="wrow">
+              <dt>accent</dt>
+              <Seg
+                cur={s.accent}
+                opts={[
+                  ['cyan', 'cyan'],
+                  ['ember', 'ember'],
+                  ['mono', 'mono'],
+                ]}
+                on={(v) => setS({ ...s, accent: v as WpSettings['accent'] })}
+              />
+            </div>
+          </>
+        )}
         <div
           className="wp-reset"
           role="button"

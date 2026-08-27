@@ -61,6 +61,7 @@ uniform float uMarkIsco;
 uniform vec3 uCompanionDir;
 uniform int uSteps;
 uniform float uStepScale;
+uniform float uPixAng; // angular size of one output pixel, radians
 
 ${CONSTS}
 
@@ -133,23 +134,34 @@ vec3 blackbody(float T) {
 }
 
 // ---------- sky ------------------------------------------------------------
+// Three shells of point stars. Each star's PSF is clamped to the size of
+// an output pixel with its flux conserved, so stars stay crisp points at
+// any field of view and any internal render scale instead of smearing.
 vec3 stars(vec3 d) {
   vec3 col = vec3(0.0);
-  for (int s = 0; s < 2; s++) {
-    float S = (s == 0) ? 52.0 : 104.0;
+  float pix = max(uPixAng, 1e-5);
+  for (int s = 0; s < 3; s++) {
+    float S = (s == 0) ? 52.0 : (s == 1) ? 104.0 : 210.0;
+    float thr = (s == 0) ? 0.14 : (s == 1) ? 0.12 : 0.10;
     vec3 q = d * S;
     vec3 base = floor(q - 0.5);
     for (int i = 0; i < 8; i++) {
       vec3 o = vec3(float(i & 1), float((i >> 1) & 1), float((i >> 2) & 1));
       vec3 id = base + o;
       vec3 h = hash33(id + S * 0.731);
-      if (h.x < 0.10) {
+      if (h.x < thr) {
         vec3 sp = normalize(id + 0.5 + (h - 0.5) * 0.9);
         float a = length(d - sp);
-        float br = pow(h.y, 18.0) * 13.0 + pow(h.y, 5.0) * 0.5;
-        float w = 0.0011 + 0.0028 * pow(h.z, 9.0);
-        float T = mix(2600.0, 11500.0, h.z * h.z);
-        col += blackbody(T) * (br * exp(-a * a / (2.0 * w * w)) * 0.09);
+        float br = (s == 0) ? pow(h.y, 18.0) * 13.0 + pow(h.y, 5.0) * 0.5
+                 : (s == 1) ? pow(h.y, 7.0) * 0.9
+                            : pow(h.y, 4.0) * 0.22;
+        float w = (s == 0) ? 0.0011 + 0.0022 * pow(h.z, 9.0) : (s == 1) ? 0.0009 : 0.0007;
+        float we = max(w, pix * 0.75);
+        float amp = br * (w * w) / (we * we) * exp(-a * a / (2.0 * we * we)) * 0.09;
+        if (amp > 1e-5) {
+          float T = mix(2600.0, 11500.0, h.z * h.z);
+          col += blackbody(T) * amp;
+        }
       }
     }
   }
@@ -166,8 +178,9 @@ vec3 galaxy(vec3 d) {
   vec2 uv = vec2(atan(dot(d, t2), dot(d, t1)), bandC);
   float m = fbm(vec2(uv.x * 2.6, uv.y * 13.0));
   float dust = fbm(vec2(uv.x * 6.5 + 3.3, uv.y * 26.0));
+  float fine = fbm(vec2(uv.x * 16.0 + 9.1, uv.y * 52.0));
   vec3 c = mix(vec3(1.0, 0.83, 0.66), vec3(0.62, 0.72, 1.0), m);
-  float g = band * (0.3 + 0.7 * m) * 0.05;
+  float g = band * (0.3 + 0.7 * m) * 0.05 * (0.7 + 0.6 * fine);
   g *= 0.3 + 0.7 * smoothstep(0.72, 0.25, dust * band);
   return c * g;
 }
@@ -366,7 +379,7 @@ uniform sampler2D uTex;
 void main() {
   vec3 c = texture(uTex, vUv).rgb;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  float k = max(l - 0.55, 0.0);
+  float k = max(l - 0.72, 0.0);
   k = k * k / (k + 0.6);
   outColor = vec4(c * (k / max(l, 1e-4)), 1.0);
 }
@@ -415,7 +428,7 @@ void main() {
   float r2 = dot(c, c);
 
   // faint physical-feeling chromatic aberration toward the frame edge
-  float ca = 0.0035 * r2;
+  float ca = 0.0016 * r2;
   vec3 scene;
   scene.r = texture(uScene, vUv + c * ca).r;
   scene.g = texture(uScene, vUv).g;

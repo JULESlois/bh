@@ -83,24 +83,27 @@ function blackbody(T: number): V3 {
 }
 const COMP = companionDir()
 
-function sky(d: V3, starGain: number): V3 {
+function sky(d: V3, starGain: number, pixAng: number): V3 {
   const col: V3 = [0, 0, 0]
-  for (let s = 0; s < 2; s++) {
-    const S = s === 0 ? 52 : 104
+  const pix = Math.max(pixAng, 1e-5)
+  for (let s = 0; s < 3; s++) {
+    const S = s === 0 ? 52 : s === 1 ? 104 : 210
+    const thr = s === 0 ? 0.14 : s === 1 ? 0.12 : 0.1
     const bx = Math.floor(d[0] * S - 0.5), by = Math.floor(d[1] * S - 0.5), bz = Math.floor(d[2] * S - 0.5)
     for (let i = 0; i < 8; i++) {
       const idx = bx + (i & 1), idy = by + ((i >> 1) & 1), idz = bz + ((i >> 2) & 1)
       const h = hash33(idx + S * 0.731, idy + S * 0.731, idz + S * 0.731)
-      if (h[0] < 0.10) {
+      if (h[0] < thr) {
         let sx = idx + 0.5 + (h[0] - 0.5) * 0.9
         let sy = idy + 0.5 + (h[1] - 0.5) * 0.9
         let sz = idz + 0.5 + (h[2] - 0.5) * 0.9
         const l = Math.hypot(sx, sy, sz); sx /= l; sy /= l; sz /= l
         const a = Math.hypot(d[0] - sx, d[1] - sy, d[2] - sz)
-        const br = h[1] ** 18 * 13 + h[1] ** 5 * 0.5
-        const w = 0.0011 + 0.0028 * h[2] ** 9
-        const amp = br * Math.exp((-a * a) / (2 * w * w)) * 0.09
-        if (amp > 1e-4) {
+        const br = s === 0 ? h[1] ** 18 * 13 + h[1] ** 5 * 0.5 : s === 1 ? h[1] ** 7 * 0.9 : h[1] ** 4 * 0.22
+        const w = s === 0 ? 0.0011 + 0.0022 * h[2] ** 9 : s === 1 ? 0.0009 : 0.0007
+        const we = Math.max(w, pix * 0.75)
+        const amp = ((br * (w * w)) / (we * we)) * Math.exp((-a * a) / (2 * we * we)) * 0.09
+        if (amp > 1e-5) {
           const bb = blackbody(mix(2600, 11500, h[2] * h[2]))
           col[0] += bb[0] * amp; col[1] += bb[1] * amp; col[2] += bb[2] * amp
         }
@@ -119,7 +122,8 @@ function sky(d: V3, starGain: number): V3 {
     const uvx = Math.atan2(d[0] * t2[0] + d[1] * t2[1] + d[2] * t2[2], d[0] * t1[0] + d[1] * t1[1] + d[2] * t1[2])
     const m = fbm(uvx * 2.6, bandC * 13)
     const dust = fbm(uvx * 6.5 + 3.3, bandC * 26)
-    let g = band * (0.3 + 0.7 * m) * 0.05
+    const fine = fbm(uvx * 16 + 9.1, bandC * 52)
+    let g = band * (0.3 + 0.7 * m) * 0.05 * (0.7 + 0.6 * fine)
     g *= 0.3 + 0.7 * smoothstep(0.72, 0.25, dust * band)
     col[0] += mix(1.0, 0.62, m) * g
     col[1] += mix(0.83, 0.72, m) * g
@@ -147,7 +151,7 @@ function gRamp(g: number): V3 {
   return [mix(mid[0], o[0], k), mix(mid[1], o[1], k), mix(mid[2], o[2], k)]
 }
 
-interface Uni { diskGain: number; starGain: number; falseColor: number }
+interface Uni { diskGain: number; starGain: number; falseColor: number; pixAng: number }
 
 function diskShade(hpx: number, hpz: number, rC: number, bAxis: number, u: Uni): { c: V3; a: number } {
   const phiAz = Math.atan2(hpz, hpx)
@@ -189,7 +193,7 @@ function tracePixel(pos: V3, dir: V3, u: Uni): V3 {
   const vt = Math.hypot(...tv)
   const col: V3 = [0, 0, 0]
   let trans = 1
-  if (vt < 1e-5) return vrad > 0 ? sky(dir, u.starGain) : [0, 0, 0]
+  if (vt < 1e-5) return vrad > 0 ? sky(dir, u.starGain, u.pixAng) : [0, 0, 0]
   const e2: V3 = [tv[0] / vt, tv[1] / vt, tv[2] / vt]
   let uu = 1 / rr
   let w = -uu * (vrad / vt) * Math.sqrt(Math.max(1 - RS * uu, 1e-5))
@@ -250,7 +254,7 @@ function tracePixel(pos: V3, dir: V3, u: Uni): V3 {
     const ed: V3 = [0, 0, 0]
     for (let k = 0; k < 3; k++) ed[k] = -w * (cphi * e1[k] + sphi * e2[k]) + uu * (-sphi * e1[k] + cphi * e2[k])
     const l = Math.hypot(...ed)
-    const s = sky([ed[0] / l, ed[1] / l, ed[2] / l], u.starGain)
+    const s = sky([ed[0] / l, ed[1] / l, ed[2] / l], u.starGain, u.pixAng)
     const fk = mix(1, 0.12, u.falseColor)
     col[0] += trans * s[0] * fk; col[1] += trans * s[1] * fk; col[2] += trans * s[2] * fk
   }
@@ -305,7 +309,12 @@ for (const t of list) {
   const p = paramsAt(t, 0, 0)
   // portrait fitting, mirroring App.tsx: preserve the horizontal field
   if (H > W) p.tanHalfFov *= H / W
-  const u: Uni = { diskGain: p.diskGain, starGain: p.starGain, falseColor: p.falseColor }
+  const u: Uni = {
+    diskGain: p.diskGain,
+    starGain: p.starGain,
+    falseColor: p.falseColor,
+    pixAng: (2 * p.tanHalfFov) / H,
+  }
   const hdr = new Float32Array(W * H * 3)
   const t0 = Date.now()
   for (let y = 0; y < H; y++) {
@@ -328,7 +337,7 @@ for (const t of list) {
       for (let k = 0; k < 3; k++) {
         const v = hdr[so + k]
         const l = v
-        bloom[o + k] = Math.max(l - 0.55, 0)
+        bloom[o + k] = Math.max(l - 0.72, 0)
       }
     }
   for (let pass = 0; pass < 3; pass++) {
