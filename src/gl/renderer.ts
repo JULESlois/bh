@@ -14,6 +14,8 @@ export interface RenderParams {
   markPhoton: number
   markIsco: number
   companionDir: [number, number, number]
+  /** disk palette: Planck temperature scale, 1 = default ember */
+  tempScale: number
 }
 
 interface Target {
@@ -190,6 +192,7 @@ export class Renderer {
     gl.uniform1f(this.loc(s, 'uStepScale'), stepScale)
     // angular size of one internal pixel — keeps star PSFs pixel-locked
     gl.uniform1f(this.loc(s, 'uPixAng'), (2 * p.tanHalfFov) / this.scene.h)
+    gl.uniform1f(this.loc(s, 'uTempScale'), p.tempScale)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
     // ---- bright pass into quarter-res bloomA

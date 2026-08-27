@@ -16,7 +16,22 @@
           { "label": "Signature", "value": "0" },
           { "label": "Edge-on", "value": "1" },
           { "label": "Photon ring", "value": "2" },
-          { "label": "Wide", "value": "3" }
+          { "label": "Face-on", "value": "3" },
+          { "label": "Near", "value": "4" },
+          { "label": "Silhouette", "value": "5" },
+          { "label": "Wide", "value": "6" }
+        ]
+      },
+      "palette": {
+        "order": 100,
+        "text": "Disk palette",
+        "type": "combo",
+        "value": "ember",
+        "options": [
+          { "label": "Crimson (3 100 K)", "value": "crimson" },
+          { "label": "Ember (5 000 K)", "value": "ember" },
+          { "label": "Gold (5 900 K)", "value": "gold" },
+          { "label": "Blue (9 000 K)", "value": "blue" }
         ]
       },
       "clock": {

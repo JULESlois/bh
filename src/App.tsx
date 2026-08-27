@@ -185,6 +185,7 @@ export default function App() {
         markPhoton: markerLevels.photon,
         markIsco: markerLevels.isco,
         companionDir: companionDir(st.drift, breath),
+        tempScale: 1,
       })
       store.setBooted()
 

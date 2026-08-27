@@ -4,13 +4,26 @@ import { cameraFrom } from '../scene/timeline'
 import { TIME_SCALE } from '../physics/constants'
 import { load, save, bindWallpaperEngine, DEFAULTS, type WpSettings } from './settings'
 
-/** camera presets: dist (M), inclination (deg), fov (deg), exposure */
+/** camera presets: dist (M), inclination (deg), fov (deg), exposure,
+ *  plus per-view disk gain and star-field boost */
 const PRESETS = [
-  { dist: 30, incl: 81, fov: 58, expo: 1.0 }, // signature
-  { dist: 27, incl: 86.5, fov: 50, expo: 1.0 }, // edge-on
-  { dist: 24, incl: 63, fov: 30, expo: 1.15 }, // photon ring
-  { dist: 47, incl: 71, fov: 62, expo: 0.92 }, // wide
+  { dist: 30, incl: 81, fov: 58, expo: 1.0, disk: 1, star: 1 }, // signature
+  { dist: 27, incl: 86.5, fov: 50, expo: 1.0, disk: 1, star: 1 }, // edge-on
+  { dist: 24, incl: 63, fov: 30, expo: 1.15, disk: 1, star: 0.8 }, // photon ring
+  { dist: 30, incl: 24, fov: 46, expo: 1.05, disk: 1, star: 0.9 }, // face-on
+  { dist: 16.5, incl: 78, fov: 68, expo: 0.95, disk: 1, star: 0.9 }, // near
+  { dist: 34, incl: 55, fov: 46, expo: 1.05, disk: 0.12, star: 1.7 }, // silhouette
+  { dist: 47, incl: 71, fov: 62, expo: 0.92, disk: 1, star: 1.1 }, // wide
 ]
+
+/** disk palettes: physical Planck temperature scales (hue only —
+ *  the shader renormalizes luminance) */
+const PALETTES: Record<string, number> = {
+  crimson: 0.62,
+  ember: 1.0,
+  gold: 1.18,
+  blue: 1.8,
+}
 /** the companion star's azimuth: once per orbit the camera crosses it and
  *  the star slides exactly behind the hole — a periodic Einstein ring */
 const COMPANION_AZ = 2.4
@@ -117,6 +130,9 @@ export default function Wallpaper() {
       incl: PRESETS[sRef.current.view].incl,
       fov: PRESETS[sRef.current.view].fov,
       expo: PRESETS[sRef.current.view].expo,
+      disk: PRESETS[sRef.current.view].disk,
+      star: PRESETS[sRef.current.view].star,
+      temp: PALETTES[sRef.current.palette] ?? 1,
       lastSec: -1,
       lastClockKey: '',
     }
@@ -158,6 +174,9 @@ export default function Wallpaper() {
       st.incl += (P.incl - st.incl) * k
       st.fov += (P.fov - st.fov) * k
       st.expo += (P.expo - st.expo) * k
+      st.disk += (P.disk - st.disk) * k
+      st.star += (P.star - st.star) * k
+      st.temp += ((PALETTES[set.palette] ?? 1) - st.temp) * k
       const damp = 1 - Math.exp((-dt / 1000) * 3.2)
       st.ptx += (st.ptxT - st.ptx) * damp
       st.pty += (st.ptyT - st.pty) * damp
@@ -187,13 +206,14 @@ export default function Wallpaper() {
         fwd: cam.fwd,
         tanHalfFov: thf,
         time: st.clock * TIME_SCALE,
-        diskGain: 1,
-        starGain: 0.25 + 1.5 * set.stars,
+        diskGain: st.disk,
+        starGain: (0.25 + 1.5 * set.stars) * st.star,
         falseColor: 0,
         exposure: st.expo,
         markPhoton: 0,
         markIsco: 0,
         companionDir: compDir,
+        tempScale: st.temp,
       })
 
       // clock — bar and colon every frame, text only when the second flips
@@ -305,7 +325,7 @@ export default function Wallpaper() {
         <div className="ht">Settings</div>
 
         <div className="wp-sec">scene</div>
-        <div className="wrow">
+        <div className="wrow tall">
           <dt>view</dt>
           <Seg
             cur={String(s.view)}
@@ -313,9 +333,25 @@ export default function Wallpaper() {
               ['0', 'signature'],
               ['1', 'edge-on'],
               ['2', 'ring'],
-              ['3', 'wide'],
+              ['3', 'face-on'],
+              ['4', 'near'],
+              ['5', 'silhouette'],
+              ['6', 'wide'],
             ]}
             on={(v) => setS({ ...s, view: Number(v) })}
+          />
+        </div>
+        <div className="wrow">
+          <dt>palette</dt>
+          <Seg
+            cur={s.palette}
+            opts={[
+              ['crimson', 'crimson'],
+              ['ember', 'ember'],
+              ['gold', 'gold'],
+              ['blue', 'blue'],
+            ]}
+            on={(v) => setS({ ...s, palette: v as WpSettings['palette'] })}
           />
         </div>
         <div className="wrow">

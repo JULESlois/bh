@@ -62,6 +62,7 @@ uniform vec3 uCompanionDir;
 uniform int uSteps;
 uniform float uStepScale;
 uniform float uPixAng; // angular size of one output pixel, radians
+uniform float uTempScale; // disk palette: scales the Planck temperature only
 
 ${CONSTS}
 
@@ -224,8 +225,9 @@ vec3 diskShade(vec3 hp, float rC, float bAxis, out float alpha) {
   float dens = 0.60 + 0.52 * n1 + 0.28 * (n2 - 0.5);
   Tem *= mix(1.0, dens, 0.65);
 
+  Tem *= uTempScale;                                    // palette: hue shifts,
   float Tobs = g * Tem;                                 // Planck at g·T
-  float inten = pow(Tobs / T_DISP, 4.0);                // ∝ g⁴ T⁴
+  float inten = pow(Tobs / (T_DISP * uTempScale), 4.0); // luminance renormalized
   vec3 phys = blackbody(Tobs) * inten * 0.62 * max(uDiskGain, 1.0);
   phys = mix(vec3(dot(phys, vec3(0.2126, 0.7152, 0.0722))), phys, 1.22);
 

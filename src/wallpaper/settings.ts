@@ -6,8 +6,10 @@
  */
 
 export interface WpSettings {
-  /** camera preset: 0 signature · 1 edge-on · 2 photon ring · 3 wide */
+  /** camera preset: 0 signature · 1 edge-on · 2 ring · 3 face-on · 4 near · 5 silhouette · 6 wide */
   view: number
+  /** disk palette — a physical Planck temperature scale */
+  palette: 'ember' | 'gold' | 'blue' | 'crimson'
   clock: 'off' | '24' | '12'
   clockStyle: 'hud' | 'minimal'
   clockPos: 'bl' | 'bc' | 'br' | 'tl' | 'tr'
@@ -27,6 +29,7 @@ export interface WpSettings {
 
 export const DEFAULTS: WpSettings = {
   view: 0,
+  palette: 'ember',
   clock: '24',
   clockStyle: 'hud',
   clockPos: 'bl',
@@ -77,7 +80,12 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
       const patch: Partial<WpSettings> = {}
       if (props.view?.value !== undefined) {
         const v = Number(props.view.value)
-        if (v >= 0 && v <= 3) patch.view = v
+        if (v >= 0 && v <= 6) patch.view = v
+      }
+      if (props.palette?.value !== undefined) {
+        const v = String(props.palette.value)
+        if (v === 'ember' || v === 'gold' || v === 'blue' || v === 'crimson')
+          patch.palette = v
       }
       if (props.clock?.value !== undefined) {
         const c = String(props.clock.value)

@@ -12,6 +12,8 @@ const W = Number(process.env.RW) || 640
 const H = Number(process.env.RH) || 360
 const STEPS = 620
 const TIME = 26 * TIME_SCALE
+/** disk palette temperature scale (mirrors uTempScale) */
+const TSCALE = Number(process.env.TSCALE) || 1
 
 type V3 = [number, number, number]
 const fract = (x: number) => x - Math.floor(x)
@@ -165,8 +167,9 @@ function diskShade(hpx: number, hpz: number, rC: number, bAxis: number, u: Uni):
   const n2 = fbmDisk(chi + 2.1, rC * 1.7 + 13.1, 24)
   const dens = 0.60 + 0.52 * n1 + 0.28 * (n2 - 0.5)
   Tem *= mix(1, dens, 0.65)
+  Tem *= TSCALE
   const Tobs = g * Tem
-  const inten = Math.pow(Tobs / T_DISP, 4)
+  const inten = Math.pow(Tobs / (T_DISP * TSCALE), 4)
   const bb = blackbody(Tobs)
   const boost = 0.62 * Math.max(u.diskGain, 1)
   const phys: V3 = [bb[0] * inten * boost, bb[1] * inten * boost, bb[2] * inten * boost]

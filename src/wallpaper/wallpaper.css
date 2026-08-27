@@ -199,7 +199,13 @@
 }
 .wp-panel .opts {
   display: flex;
-  gap: 9px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px 9px;
+}
+.wp-panel .wrow.tall {
+  align-items: flex-start;
+  padding-top: 2px;
 }
 .wp-panel .opt {
   font-size: 10.5px;
