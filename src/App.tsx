@@ -4,27 +4,16 @@ import { paramsAt, companionDir, shadowRadiusPx, rayDir, SECTIONS, SECTION_VH, t
 import { TIME_SCALE } from './physics/constants'
 import { traceRay } from './physics/geodesic'
 import { store, markerLevels } from './store'
-import { domRefs } from './ui/dom'
+import { domRefs, actions } from './ui/dom'
 import Overlay from './ui/Overlay'
 import Hud from './ui/Hud'
 import Chrome from './ui/Chrome'
-
-const HINTS = [
-  'scroll — the camera is yours',
-  'click the underlined terms',
-  'click the image — every pixel is a measurement',
-  'click the disk — it reports its own physics',
-  'keep scrolling — a star is passing behind',
-  'false color: g, the measured shift',
-  'click ↑ to return',
-]
-
-const COMPANION = companionDir()
 
 function smoothstep(a: number, b: number, x: number): number {
   const k = Math.min(Math.max((x - a) / (b - a), 0), 1)
   return k * k * (3 - 2 * k)
 }
+const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2)
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -51,22 +40,79 @@ export default function App() {
       last: performance.now(),
       clock: 0,
       shadowAnno: 0,
-      hintIdx: -1,
       raf: 0,
       lastRaw: 0,
       scrollTs: -1e9,
       railO: 0,
+      hudO: 0,
+      drift: 0,
+      section: 0,
+      anim: null as null | { from: number; to: number; t0: number; dur: number },
+      cooldownTs: 0,
+      wheelAcc: 0,
     }
 
-    const resize = () => renderer.setSize(window.innerWidth, window.innerHeight)
+    const resize = () => {
+      renderer.setSize(window.innerWidth, window.innerHeight)
+      // keep the page locked to the current screen when the viewport changes
+      if (!st.anim) window.scrollTo(0, st.section * window.innerHeight * SECTION_VH)
+    }
     resize()
     window.addEventListener('resize', resize)
 
-    // deep link: #t=3.5 jumps straight to that point of the fall
+    // ---- forceful screen-by-screen paging -------------------------------
+    const pageTo = (idx: number, now: number) => {
+      idx = Math.min(Math.max(idx, 0), SECTIONS - 1)
+      if (idx === st.section) return
+      st.section = idx
+      st.anim = {
+        from: window.scrollY,
+        to: idx * window.innerHeight * SECTION_VH,
+        t0: now,
+        dur: reduced ? 0 : 700,
+      }
+    }
+
+    actions.pageTo = (idx: number) => pageTo(idx, performance.now())
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return // pinch-zoom gesture — not ours
+      e.preventDefault()
+      const now = performance.now()
+      if (store.get().hitRec) {
+        store.setHit(null) // first gesture closes the callout
+        st.cooldownTs = now + 250
+        return
+      }
+      if (st.anim || now < st.cooldownTs) return
+      st.wheelAcc += e.deltaY * (e.deltaMode === 1 ? 16 : 1)
+      if (Math.abs(st.wheelAcc) > 24) {
+        pageTo(st.section + Math.sign(st.wheelAcc), now)
+        st.wheelAcc = 0
+      }
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+
+    const onKey = (e: KeyboardEvent) => {
+      const now = performance.now()
+      let dir = 0
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) dir = 1
+      else if (e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) dir = -1
+      else if (e.key === 'Home') { e.preventDefault(); pageTo(0, now); return }
+      else if (e.key === 'End') { e.preventDefault(); pageTo(SECTIONS - 1, now); return }
+      if (!dir) return
+      e.preventDefault()
+      if (store.get().hitRec) { store.setHit(null); return }
+      if (!st.anim && now >= st.cooldownTs) pageTo(st.section + dir, now)
+    }
+    window.addEventListener('keydown', onKey)
+
+    // deep link: #t=3 jumps straight to that screen
     const m = location.hash.match(/t=([\d.]+)/)
     if (m) {
-      const target = Math.min(Math.max(parseFloat(m[1]), 0), SECTIONS - 1)
+      const target = Math.round(Math.min(Math.max(parseFloat(m[1]), 0), SECTIONS - 1))
       st.t = target
+      st.section = target
       requestAnimationFrame(() =>
         window.scrollTo(0, target * window.innerHeight * SECTION_VH),
       )
@@ -84,21 +130,43 @@ export default function App() {
       st.last = now
       st.clock += dt / 1000
 
+      // drive the paging tween
+      if (st.anim) {
+        const k = st.anim.dur <= 0 ? 1 : Math.min((now - st.anim.t0) / st.anim.dur, 1)
+        window.scrollTo(0, st.anim.from + (st.anim.to - st.anim.from) * easeInOut(k))
+        if (k >= 1) {
+          st.anim = null
+          st.cooldownTs = now + 240 // swallow the momentum tail
+          st.wheelAcc = 0
+        }
+      }
+
       const vh = window.innerHeight
       const raw = Math.min(Math.max(window.scrollY / (vh * SECTION_VH), 0), SECTIONS - 1)
+      if (!st.anim) st.section = Math.round(raw) // sync after touch/native scrolls
       const damp = 1 - Math.exp((-dt / 1000) * (reduced ? 9 : 3.6))
       st.t += (raw - st.t) * damp
       st.ptx += (st.ptxT - st.ptx) * damp
       st.pty += (st.ptyT - st.pty) * damp
 
+      // the hole never rests: slow orbital drift + inclination breathing,
+      // on top of the differentially-rotating disk turbulence
+      if (!reduced) st.drift += (dt / 1000) * 0.016
+      const breath = reduced ? 0 : Math.sin(st.clock * 0.2) * 0.5
+
       const t = st.t
-      const p = paramsAt(t, st.ptx, st.pty)
+      const p = paramsAt(t, st.ptx, st.pty, st.drift, breath)
       frameRef.current = p
+
+      const rec = store.get().hitRec
+      if (rec && Math.abs(window.scrollY - rec.scrollY) > 40) store.setHit(null)
 
       const ann = store.get().annotations
       const mk = 1 - Math.exp((-dt / 1000) * 5)
       markerLevels.photon += ((ann.photon ? 1 : 0) - markerLevels.photon) * mk
       markerLevels.isco += ((ann.isco ? 1 : 0) - markerLevels.isco) * mk
+      st.hudO += ((rec ? 1 : 0) - st.hudO) * (1 - Math.exp((-dt / 1000) * 7))
+      const poster = 1 - st.hudO
 
       renderer.adapt(dt)
       renderer.render({
@@ -114,7 +182,7 @@ export default function App() {
         exposure: p.exposure,
         markPhoton: markerLevels.photon,
         markIsco: markerLevels.isco,
-        companionDir: COMPANION,
+        companionDir: companionDir(st.drift, breath),
       })
       store.setBooted()
 
@@ -124,7 +192,7 @@ export default function App() {
         if (!el) continue
         const rising = i === 0 ? 1 : smoothstep(i - 0.62, i - 0.2, t)
         const falling = i === SECTIONS - 1 ? 1 : 1 - smoothstep(i + 0.2, i + 0.62, t)
-        const v = rising * falling
+        const v = rising * falling * poster
         const d = Math.min(Math.max(t - i, -1), 1)
         el.style.setProperty('--fx', v.toFixed(4))
         el.style.setProperty('--fxd', d.toFixed(4))
@@ -136,7 +204,7 @@ export default function App() {
       st.lastRaw = raw
       st.railO += ((now - st.scrollTs < 1100 ? 1 : 0) - st.railO) * mk
       const rail = domRefs.rail as HTMLElement | null
-      if (rail) rail.style.opacity = st.railO.toFixed(3)
+      if (rail) rail.style.opacity = (st.railO * poster).toFixed(3)
 
       const thumb = domRefs.railThumb as HTMLElement | null
       if (thumb) thumb.style.top = `${(t / (SECTIONS - 1)) * 100}%`
@@ -148,23 +216,16 @@ export default function App() {
           `fov   ${p.fovDeg.toFixed(0)}°\n` +
           `t     ${t.toFixed(2)}`
 
-      const hintIdx = Math.min(Math.max(Math.round(t), 0), SECTIONS - 1)
-      if (hintIdx !== st.hintIdx) {
-        st.hintIdx = hintIdx
-        const h = domRefs.hint as HTMLElement | null
-        if (h) h.textContent = HINTS[hintIdx]
-      }
-
       const legend = domRefs.legend as HTMLElement | null
-      if (legend) legend.style.opacity = p.falseColor.toFixed(3)
+      if (legend) legend.style.opacity = (p.falseColor * poster).toFixed(3)
       const cue = domRefs.cue as HTMLElement | null
-      if (cue) cue.style.opacity = (1 - smoothstep(0.04, 0.3, t)).toFixed(3)
+      if (cue) cue.style.opacity = ((1 - smoothstep(0.04, 0.3, t)) * poster).toFixed(3)
 
       // dashed b_c ring — angular size computed from the live camera state
       st.shadowAnno += ((ann.shadow ? 1 : 0) - st.shadowAnno) * mk
       const wrap = domRefs.annoWrap as SVGElement | null
       if (wrap) {
-        wrap.style.opacity = st.shadowAnno.toFixed(3)
+        wrap.style.opacity = (st.shadowAnno * poster).toFixed(3)
         if (st.shadowAnno > 0.004) {
           const rpx = shadowRadiusPx(p.dist, p.fovDeg, vh)
           const cx = window.innerWidth / 2
@@ -196,7 +257,10 @@ export default function App() {
 
     return () => {
       cancelAnimationFrame(st.raf)
+      actions.pageTo = undefined
       window.removeEventListener('resize', resize)
+      window.removeEventListener('wheel', onWheel)
+      window.removeEventListener('keydown', onKey)
       window.removeEventListener('pointermove', onPointer)
     }
   }, [])
@@ -209,7 +273,7 @@ export default function App() {
     const px = (e.clientX / w) * 2 - 1
     const py = -((e.clientY / h) * 2 - 1)
     const hit = traceRay(p.pos, rayDir(p, px, py, w / h))
-    store.setHit({ hit, x: e.clientX, y: e.clientY, id: ++hitId.current })
+    store.setHit({ hit, x: e.clientX, y: e.clientY, id: ++hitId.current, scrollY: window.scrollY })
   }
 
   return (

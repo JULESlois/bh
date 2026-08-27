@@ -28,8 +28,6 @@ export default function Chrome() {
         </div>
       </div>
 
-      <div className="hint" ref={reg('hint')} aria-live="polite" />
-
       <div className="legend" ref={reg('legend')} aria-hidden>
         <div className="bar" />
         <div className="lab">
@@ -41,7 +39,6 @@ export default function Chrome() {
 
       <div className="cue" ref={reg('cue')} aria-hidden>
         <div className="line" />
-        <span>scroll</span>
       </div>
 
       <div className={`boot${s.booted && !s.glError ? ' done' : ''}`}>

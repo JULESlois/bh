@@ -13,6 +13,8 @@ export interface HitRecord {
   x: number // click position, css px
   y: number
   id: number
+  /** scrollY at the moment of the click — scrolling away dismisses the callout */
+  scrollY: number
 }
 
 interface State {

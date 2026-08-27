@@ -10,3 +10,6 @@ export function reg(key: string) {
     domRefs[key] = el
   }
 }
+
+/** imperative hooks the render loop exposes to UI components */
+export const actions: { pageTo?: (idx: number) => void } = {}

@@ -54,18 +54,24 @@ static (no aberration from its slow orbital drift).
 
 No buttons, no nav. Three verbs:
 
-- **Scroll** — the only camera control, snapping screen by screen through
-  one continuous shot: hero → event horizon → photon sphere → disk →
-  lensing (Einstein-ring passage) → false-color redshift view → epilogue.
-  The progress rail and camera readout surface only while the page moves.
+- **Scroll** — the only camera control. Wheel and keyboard gestures are
+  paged by a locked tween (touch falls back to mandatory CSS snap), so one
+  gesture always lands on the next full screen of the continuous shot:
+  hero → event horizon → photon sphere → disk → lensing (Einstein-ring
+  passage) → false-color redshift view → epilogue. The native scrollbar is
+  hidden; the progress rail surfaces only while the page moves. The camera
+  itself never rests — a slow orbital drift and inclination breathing run
+  on every screen, and the Einstein-ring star tracks the drift so the
+  alignment stays exact.
 - **Click a term** — underlined physics terms toggle annotations: a
   screen-space dashed circle at b_c, ray-traced marker rings at r = 3M and
   the ISCO (they lens like everything else), footnote data, and a
   mass-preset cycler (10 M☉ / Sgr A* / M87*).
-- **Click the image** — the same Binet equation runs CPU-side for the
-  clicked pixel (`src/physics/geodesic.ts`) and reports what that photon
-  did: class, r, orbital speed, g, T_obs, winding angle, impact parameter,
-  plus an SVG inset of the photon's actual orbital-plane trajectory.
+- **Click the image** — the poster fades away and the same Binet equation
+  runs CPU-side for the clicked pixel (`src/physics/geodesic.ts`); a
+  polyline ties that pixel to a compact readout of what its photon did
+  (class, r, orbital speed, g, T_obs, impact parameter, deflection).
+  Scrolling or clicking the readout dismisses it and the poster returns.
 
 Deep links for QA: append `#t=3.5` (0–6) to land at any scroll position.
 

@@ -89,10 +89,16 @@ export function cameraFrom(dist: number, inclDeg: number, azim: number, fovDeg: 
   }
 }
 
-export function paramsAt(t: number, pointerX: number, pointerY: number): FrameParams {
+export function paramsAt(
+  t: number,
+  pointerX: number,
+  pointerY: number,
+  azimOff = 0,
+  inclOff = 0,
+): FrameParams {
   const dist = kf(K.dist, t)
-  const incl = Math.min(Math.max(kf(K.incl, t) + pointerY * 2.0, 12), 88.5)
-  const azim = kf(K.azim, t) + pointerX * 0.05
+  const incl = Math.min(Math.max(kf(K.incl, t) + pointerY * 2.0 + inclOff, 12), 88.5)
+  const azim = kf(K.azim, t) + pointerX * 0.05 + azimOff
   const fov = kf(K.fov, t)
   const cam = cameraFrom(dist, incl, azim, fov)
 
@@ -121,8 +127,8 @@ function smoothstep(a: number, b: number, x: number): number {
 /** the companion star sits exactly behind the hole at t = 4.35:
  *  rays from the camera through the center escape along −poŝ, so the
  *  source must live at that sky direction for an Einstein ring. */
-export function companionDir(): Vec3 {
-  const cam = cameraFrom(1, kf(K.incl, 4.35), kf(K.azim, 4.35), 55)
+export function companionDir(azimOff = 0, inclOff = 0): Vec3 {
+  const cam = cameraFrom(1, kf(K.incl, 4.35) + inclOff, kf(K.azim, 4.35) + azimOff, 55)
   return norm([-cam.pos[0], -cam.pos[1], -cam.pos[2]])
 }
 

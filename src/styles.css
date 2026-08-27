@@ -21,9 +21,17 @@
 html {
   scroll-behavior: auto;
   overflow-x: hidden;
-  /* the page advances screen by screen — each wheel/touch gesture lands
-     exactly on the next beat of the camera move */
+  /* the page advances screen by screen: wheel/keys are paged by JS, touch
+     falls back to CSS snapping — either way you land on a full screen */
   scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 body {
   margin: 0;
@@ -252,19 +260,6 @@ canvas#gl {
   font-weight: 500;
 }
 
-.hint {
-  position: fixed;
-  left: clamp(22px, 6vw, 92px);
-  bottom: 20px;
-  z-index: 6;
-  font-size: 10.5px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--dim);
-  pointer-events: none;
-  transition: opacity 0.5s;
-}
-
 .legend {
   position: fixed;
   left: 50%;
@@ -343,106 +338,105 @@ canvas#gl {
   stroke-width: 1;
 }
 
-/* ————— HUD: the ray report ————— */
+/* ————— callout: the ray report, tied to the measured pixel ————— */
 
-.hud {
+.callout-line {
   position: fixed;
-  right: clamp(14px, 3vw, 44px);
-  bottom: clamp(16px, 4vh, 44px);
+  inset: 0;
   z-index: 7;
-  width: 296px;
-  max-width: 88vw;
+  pointer-events: none;
+}
+.callout-line polyline {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 1.2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: lineDraw 0.4s ease-out 0.05s forwards;
+}
+@keyframes lineDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+.callout {
+  position: fixed;
+  z-index: 7;
+  width: 246px;
   pointer-events: auto;
   cursor: pointer;
-  padding: 18px 18px 14px;
+  padding: 14px 16px 13px;
   background: rgba(4, 4, 4, 0.82);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  animation: hudIn 0.35s cubic-bezier(0.2, 0.9, 0.25, 1);
+  animation: calloutIn 0.4s cubic-bezier(0.2, 0.9, 0.25, 1) 0.18s backwards;
 }
 /* instrument corner brackets instead of a boxed card */
-.hud::before,
-.hud::after {
+.callout::before,
+.callout::after {
   content: '';
   position: absolute;
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   pointer-events: none;
 }
-.hud::before {
+.callout::before {
   top: 0;
   left: 0;
   border-top: 1px solid var(--cyan);
   border-left: 1px solid var(--cyan);
 }
-.hud::after {
+.callout::after {
   bottom: 0;
   right: 0;
   border-bottom: 1px solid var(--cyan);
   border-right: 1px solid var(--cyan);
 }
-@keyframes hudIn {
-  from { opacity: 0; transform: translateY(10px); }
+@keyframes calloutIn {
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
-.hud .hk {
-  font-size: 9px;
+.callout .hk {
+  font-size: 8.5px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--cyan);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
-.hud .ht {
+.callout .ht {
   font-family: var(--font-d);
   font-weight: 900;
   font-stretch: 112%;
   text-transform: uppercase;
-  font-size: 20px;
+  font-size: 17px;
   letter-spacing: 0.02em;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
-.hud .rows {
+.callout .rows {
   margin: 0;
   display: grid;
   gap: 4px;
 }
-.hud .row {
+.callout .row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
 }
-.hud .row dt {
-  font-size: 9.5px;
+.callout .row dt {
+  font-size: 9px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--dim);
   white-space: nowrap;
 }
-.hud .row dd {
+.callout .row dd {
   margin: 0;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--ink);
   text-align: right;
 }
-.hud .row dd.hot {
+.callout .row dd.hot {
   color: var(--ember);
-}
-.hud .hr {
-  height: 1px;
-  margin: 12px 0 10px;
-  background: linear-gradient(90deg, var(--cyan-dim), transparent 70%);
-}
-.hud .dismiss {
-  margin-top: 8px;
-  font-size: 8.5px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-.hud svg {
-  display: block;
-  margin: 0 auto;
 }
 
 .reticle {
@@ -518,12 +512,13 @@ canvas#gl {
   .rail .ro { display: none; }
   .sec { padding: 20px 18px 64px; }
   .body { font-size: 13.5px; }
-  .hud { width: 280px; }
+  .callout { width: 228px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cue .line { animation: none; opacity: 0.5; }
   .boot .bs { animation: none; }
-  .hud { animation: none; }
+  .callout { animation: none; }
+  .callout-line polyline { animation: none; stroke-dashoffset: 0; }
   .reticle { animation: none; opacity: 0.85; }
 }

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { store, useStore, type Annotations } from '../store'
 import { MASSES } from '../physics/constants'
-import { reg } from './dom'
+import { reg, actions } from './dom'
 
 function Term(props: {
   k?: keyof Annotations
@@ -71,8 +71,6 @@ export default function Overlay() {
           One photon per pixel, traced <em>backwards</em> through curved
           spacetime by integrating the geodesic equation of the Schwarzschild
           metric. Nothing on this page is painted, filmed, or textured.
-          <br />
-          <span className="sub">Scroll to fall in.</span>
         </p>
       </Sec>
 
@@ -91,7 +89,7 @@ export default function Overlay() {
           cross-section for light, radius <em>√27/2 · r_s ≈ 2.6 r_s</em>, and
           the blackest thing this screen can show.
         </p>
-        <p className="body sub">
+        <p className="body">
           Every scale here is set by the mass. For{' '}
           <Term onClick={() => store.cycleMass()}>M = {mass.label} ⟳</Term>:
           horizon {mass.horizon} — {mass.note}.
@@ -166,11 +164,10 @@ export default function Overlay() {
           behind the hole smears into an{' '}
           <Term k="einstein" active={a.einstein}>Einstein ring</Term>.
         </p>
-        <p className="body sub">Keep scrolling — a star is about to pass behind.</p>
         {a.einstein && (
           <div className="foot">
             perfect alignment → a full circle of light; slight offset → two
-            arcs of unequal brightness. Watch the blue star as you scroll.
+            arcs of unequal brightness.
           </div>
         )}
       </Sec>
@@ -211,7 +208,11 @@ export default function Overlay() {
           rescaled into the visible band; a real 10 M☉ disk peaks in X-rays.
         </p>
         <p className="body" style={{ marginTop: 26 }}>
-          <Term onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <Term
+            onClick={() =>
+              actions.pageTo ? actions.pageTo(0) : window.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+          >
             ↑ back to the top
           </Term>
         </p>
