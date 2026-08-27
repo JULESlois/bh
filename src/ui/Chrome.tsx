@@ -16,15 +16,21 @@ export default function Chrome() {
         </text>
       </svg>
 
+      {/* readability scrims for the bright screens (photon sphere, disk,
+          false color) — they run on their own wider animation window */}
+      <div className="scrim scrim-l" ref={reg('scrim2')} aria-hidden />
+      <div className="scrim scrim-l" ref={reg('scrim3')} aria-hidden />
+      <div className="scrim scrim-t" ref={reg('scrim5')} aria-hidden />
+
       <div className="rail" ref={reg('rail')} aria-hidden>
-        <div className="ro" ref={reg('railRo')}>
-          {''}
-        </div>
         <div className="track">
           {Array.from({ length: 7 }, (_, i) => (
             <i key={i} style={{ top: `${(i / 6) * 100}%` }} />
           ))}
           <div className="thumb" ref={reg('railThumb')} />
+        </div>
+        <div className="ro" ref={reg('railRo')}>
+          {''}
         </div>
       </div>
 

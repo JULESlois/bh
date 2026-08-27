@@ -63,15 +63,14 @@ No buttons, no nav. Three verbs:
   itself never rests — a slow orbital drift and inclination breathing run
   on every screen, and the Einstein-ring star tracks the drift so the
   alignment stays exact.
-- **Click a term** — underlined physics terms toggle annotations: a
-  screen-space dashed circle at b_c, ray-traced marker rings at r = 3M and
-  the ISCO (they lens like everything else), footnote data, and a
-  mass-preset cycler (10 M☉ / Sgr A* / M87*).
-- **Click the image** — the poster fades away and the same Binet equation
-  runs CPU-side for the clicked pixel (`src/physics/geodesic.ts`); a
-  polyline ties that pixel to a compact readout of what its photon did
-  (class, r, orbital speed, g, T_obs, impact parameter, deflection).
-  Scrolling or clicking the readout dismisses it and the poster returns.
+- **Click anything** — one unified interaction. Clicking a pixel of the
+  render runs the same Binet equation CPU-side (`src/physics/geodesic.ts`)
+  and reports what that photon did; clicking an underlined physics term
+  opens its card and draws its overlay on the render (ray-traced marker
+  rings at r = 3M and the ISCO, the dashed b_c circle, the mass cycler).
+  Either way the poster fades out and a polyline ties the click point to a
+  chamfered instrument card; a new click, a scroll, or clicking the card
+  retracts the line, fades the card, and brings the poster back.
 
 Deep links for QA: append `#t=3.5` (0–6) to land at any scroll position.
 

@@ -126,23 +126,6 @@ canvas#gl {
 
 /* ————— type ————— */
 
-.kicker {
-  font: 500 11px/1 var(--font-m);
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--cyan);
-  margin-bottom: 18px;
-  white-space: nowrap;
-}
-.kicker::before {
-  content: '';
-  display: inline-block;
-  width: 26px;
-  height: 1px;
-  background: var(--cyan-dim);
-  vertical-align: middle;
-  margin-right: 12px;
-}
 .display {
   font-family: var(--font-d);
   font-weight: 900;
@@ -199,19 +182,23 @@ canvas#gl {
   outline-offset: 3px;
 }
 
-.foot {
-  margin-top: 18px;
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--cyan);
-  border-left: 1px solid var(--cyan);
-  padding: 9px 12px;
-  background: rgba(4, 4, 4, 0.55);
-  max-width: 40ch;
-  opacity: 0.94;
-}
+/* ————— chrome: rail, legend, cue, scrims ————— */
 
-/* ————— chrome: rail, hint, legend, cue ————— */
+/* gradient black filters that keep poster text legible over the bright
+   screens; direction matches where the text sits */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+}
+.scrim-l {
+  background: linear-gradient(90deg, rgba(2, 2, 2, 0.72), rgba(2, 2, 2, 0.34) 44%, transparent 74%);
+}
+.scrim-t {
+  background: linear-gradient(180deg, rgba(2, 2, 2, 0.66), rgba(2, 2, 2, 0.28) 46%, transparent 76%);
+}
 
 .rail {
   position: fixed;
@@ -357,6 +344,14 @@ canvas#gl {
 @keyframes lineDraw {
   to { stroke-dashoffset: 0; }
 }
+/* exit: the line retracts toward the click point */
+.callout-line.out polyline {
+  animation: lineErase 0.24s ease-in forwards;
+}
+@keyframes lineErase {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 1; }
+}
 
 .callout {
   position: fixed;
@@ -368,7 +363,24 @@ canvas#gl {
   background: rgba(4, 4, 4, 0.82);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  /* chamfered top-right and bottom-left corners */
+  clip-path: polygon(
+    0 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% 100%,
+    16px 100%,
+    0 calc(100% - 16px)
+  );
   animation: calloutIn 0.4s cubic-bezier(0.2, 0.9, 0.25, 1) 0.18s backwards;
+}
+.callout.out {
+  animation: calloutOut 0.24s ease-in forwards;
+  pointer-events: none;
+}
+@keyframes calloutOut {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(6px); }
 }
 /* instrument corner brackets instead of a boxed card */
 .callout::before,
@@ -394,13 +406,6 @@ canvas#gl {
 @keyframes calloutIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
-}
-.callout .hk {
-  font-size: 8.5px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--cyan);
-  margin-bottom: 6px;
 }
 .callout .ht {
   font-family: var(--font-d);
@@ -437,6 +442,12 @@ canvas#gl {
 }
 .callout .row dd.hot {
   color: var(--ember);
+}
+.callout .note {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--dim);
 }
 
 .reticle {
@@ -519,6 +530,8 @@ canvas#gl {
   .cue .line { animation: none; opacity: 0.5; }
   .boot .bs { animation: none; }
   .callout { animation: none; }
+  .callout.out { animation: none; opacity: 0; }
   .callout-line polyline { animation: none; stroke-dashoffset: 0; }
+  .callout-line.out polyline { animation: none; opacity: 0; }
   .reticle { animation: none; opacity: 0.85; }
 }

@@ -1,40 +1,38 @@
 import { useSyncExternalStore } from 'react'
 import type { Hit } from './physics/geodesic'
 
-export interface Annotations {
-  shadow: boolean
-  photon: boolean
-  isco: boolean
-  einstein: boolean
-}
+/**
+ * One unified focus model: clicking the render (a ray measurement) and
+ * clicking a physics term both open the same callout — a polyline from
+ * the click point to a chamfered instrument card. A term focus also
+ * drives its overlay on the render (marker rings, the b_c circle).
+ * Any new focus, a scroll, or a click on the card dismisses it.
+ */
 
-export interface HitRecord {
-  hit: Hit
-  x: number // click position, css px
-  y: number
-  id: number
-  /** scrollY at the moment of the click — scrolling away dismisses the callout */
-  scrollY: number
-}
+export type TermKey = 'shadow' | 'photon' | 'isco' | 'einstein' | 'mass'
+
+export type Focus =
+  | { type: 'ray'; hit: Hit; n: number; x: number; y: number; id: number; scrollY: number }
+  | { type: 'term'; key: TermKey; x: number; y: number; id: number; scrollY: number; massIdx: number }
 
 interface State {
-  annotations: Annotations
+  focus: Focus | null
   massIdx: number
-  hitRec: HitRecord | null
   booted: boolean
   glError: string | null
 }
 
 const state: State = {
-  annotations: { shadow: false, photon: false, isco: false, einstein: false },
+  focus: null,
   massIdx: 0,
-  hitRec: null,
   booted: false,
   glError: null,
 }
 
 const listeners = new Set<() => void>()
 let version = 0
+let focusSeq = 0
+let raySeq = 0
 
 function emit() {
   version++
@@ -43,23 +41,28 @@ function emit() {
 
 export const store = {
   get: () => state,
-  version: () => version,
   subscribe(fn: () => void) {
     listeners.add(fn)
     return () => {
       listeners.delete(fn)
     }
   },
-  toggleAnnotation(key: keyof Annotations) {
-    state.annotations = { ...state.annotations, [key]: !state.annotations[key] }
+  openRay(hit: Hit, x: number, y: number) {
+    state.focus = { type: 'ray', hit, n: ++raySeq, x, y, id: ++focusSeq, scrollY: window.scrollY }
     emit()
+  },
+  openTerm(key: TermKey, x: number, y: number) {
+    state.focus = { type: 'term', key, x, y, id: ++focusSeq, scrollY: window.scrollY, massIdx: state.massIdx }
+    emit()
+  },
+  dismiss() {
+    if (state.focus) {
+      state.focus = null
+      emit()
+    }
   },
   cycleMass() {
     state.massIdx = (state.massIdx + 1) % 3
-    emit()
-  },
-  setHit(rec: HitRecord | null) {
-    state.hitRec = rec
     emit()
   },
   setBooted() {
@@ -84,5 +87,5 @@ export function useStore(): State {
   return state
 }
 
-// annotation marker smoothing targets, read by the render loop
+// annotation marker smoothing levels, written by the render loop
 export const markerLevels = { photon: 0, isco: 0 }

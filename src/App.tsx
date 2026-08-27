@@ -18,7 +18,6 @@ const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameRef = useRef<FrameParams | null>(null)
-  const hitId = useRef(0)
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -79,8 +78,8 @@ export default function App() {
       if (e.ctrlKey) return // pinch-zoom gesture — not ours
       e.preventDefault()
       const now = performance.now()
-      if (store.get().hitRec) {
-        store.setHit(null) // first gesture closes the callout
+      if (store.get().focus) {
+        store.dismiss() // first gesture closes the callout
         st.cooldownTs = now + 250
         return
       }
@@ -102,7 +101,7 @@ export default function App() {
       else if (e.key === 'End') { e.preventDefault(); pageTo(SECTIONS - 1, now); return }
       if (!dir) return
       e.preventDefault()
-      if (store.get().hitRec) { store.setHit(null); return }
+      if (store.get().focus) { store.dismiss(); return }
       if (!st.anim && now >= st.cooldownTs) pageTo(st.section + dir, now)
     }
     window.addEventListener('keydown', onKey)
@@ -158,14 +157,14 @@ export default function App() {
       const p = paramsAt(t, st.ptx, st.pty, st.drift, breath)
       frameRef.current = p
 
-      const rec = store.get().hitRec
-      if (rec && Math.abs(window.scrollY - rec.scrollY) > 40) store.setHit(null)
+      const focus = store.get().focus
+      if (focus && Math.abs(window.scrollY - focus.scrollY) > 40) store.dismiss()
 
-      const ann = store.get().annotations
+      const term = focus?.type === 'term' ? focus.key : null
       const mk = 1 - Math.exp((-dt / 1000) * 5)
-      markerLevels.photon += ((ann.photon ? 1 : 0) - markerLevels.photon) * mk
-      markerLevels.isco += ((ann.isco ? 1 : 0) - markerLevels.isco) * mk
-      st.hudO += ((rec ? 1 : 0) - st.hudO) * (1 - Math.exp((-dt / 1000) * 7))
+      markerLevels.photon += ((term === 'photon' ? 1 : 0) - markerLevels.photon) * mk
+      markerLevels.isco += ((term === 'isco' ? 1 : 0) - markerLevels.isco) * mk
+      st.hudO += ((focus ? 1 : 0) - st.hudO) * (1 - Math.exp((-dt / 1000) * 7))
       const poster = 1 - st.hudO
 
       renderer.adapt(dt)
@@ -221,8 +220,17 @@ export default function App() {
       const cue = domRefs.cue as HTMLElement | null
       if (cue) cue.style.opacity = ((1 - smoothstep(0.04, 0.3, t)) * poster).toFixed(3)
 
+      // brightness scrims behind the text on the hot screens — deliberately
+      // on a wider, earlier window than the text so they never move in sync
+      for (const [key, i] of [['scrim2', 2], ['scrim3', 3], ['scrim5', 5]] as const) {
+        const el = domRefs[key] as HTMLElement | null
+        if (!el) continue
+        const v = smoothstep(i - 0.85, i - 0.32, t) * (1 - smoothstep(i + 0.32, i + 0.85, t))
+        el.style.opacity = (v * poster).toFixed(3)
+      }
+
       // dashed b_c ring — angular size computed from the live camera state
-      st.shadowAnno += ((ann.shadow ? 1 : 0) - st.shadowAnno) * mk
+      st.shadowAnno += ((term === 'shadow' ? 1 : 0) - st.shadowAnno) * mk
       const wrap = domRefs.annoWrap as SVGElement | null
       if (wrap) {
         wrap.style.opacity = (st.shadowAnno * poster).toFixed(3)
@@ -273,7 +281,7 @@ export default function App() {
     const px = (e.clientX / w) * 2 - 1
     const py = -((e.clientY / h) * 2 - 1)
     const hit = traceRay(p.pos, rayDir(p, px, py, w / h))
-    store.setHit({ hit, x: e.clientX, y: e.clientY, id: ++hitId.current, scrollY: window.scrollY })
+    store.openRay(hit, e.clientX, e.clientY)
   }
 
   return (
