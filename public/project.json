@@ -19,7 +19,9 @@
           { "label": "Face-on", "value": "3" },
           { "label": "Near", "value": "4" },
           { "label": "Silhouette", "value": "5" },
-          { "label": "Wide", "value": "6" }
+          { "label": "Wide", "value": "6" },
+          { "label": "Knife-edge", "value": "7" },
+          { "label": "Polar", "value": "8" }
         ]
       },
       "palette": {

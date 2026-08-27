@@ -5,7 +5,7 @@
  */
 import { deflateSync } from 'node:zlib'
 import { writeFileSync } from 'node:fs'
-import { paramsAt, companionDir, rayDir } from '../src/scene/timeline'
+import { paramsAt, companionDir, rayDir, cameraFrom } from '../src/scene/timeline'
 import { RS, R_PHOTON, R_ISCO, R_OUT, R_ESC, T_DISP, NT_PEAK, TIME_SCALE } from '../src/physics/constants'
 
 const W = Number(process.env.RW) || 640
@@ -310,6 +310,17 @@ const ts = process.argv.slice(2).map(Number)
 const list = ts.length ? ts : [0, 2, 3, 4.35]
 for (const t of list) {
   const p = paramsAt(t, 0, 0)
+  // optional camera override for checking wallpaper presets:
+  // DIST=26 INCL=89.6 FOV=44 [AZIM=0.6] node refrender.cjs 0
+  if (process.env.DIST || process.env.INCL || process.env.FOV) {
+    const cam = cameraFrom(
+      Number(process.env.DIST) || p.dist,
+      Number(process.env.INCL) || p.inclDeg,
+      Number(process.env.AZIM) || 0.6,
+      Number(process.env.FOV) || p.fovDeg,
+    )
+    Object.assign(p, cam)
+  }
   // portrait fitting, mirroring App.tsx: preserve the horizontal field
   if (H > W) p.tanHalfFov *= H / W
   const u: Uni = {

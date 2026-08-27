@@ -80,7 +80,7 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
       const patch: Partial<WpSettings> = {}
       if (props.view?.value !== undefined) {
         const v = Number(props.view.value)
-        if (v >= 0 && v <= 6) patch.view = v
+        if (v >= 0 && v <= 8) patch.view = v
       }
       if (props.palette?.value !== undefined) {
         const v = String(props.palette.value)

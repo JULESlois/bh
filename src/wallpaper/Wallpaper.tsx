@@ -7,13 +7,15 @@ import { load, save, bindWallpaperEngine, DEFAULTS, type WpSettings } from './se
 /** camera presets: dist (M), inclination (deg), fov (deg), exposure,
  *  plus per-view disk gain and star-field boost */
 const PRESETS = [
-  { dist: 30, incl: 81, fov: 58, expo: 1.0, disk: 1, star: 1 }, // signature
-  { dist: 27, incl: 86.5, fov: 50, expo: 1.0, disk: 1, star: 1 }, // edge-on
-  { dist: 24, incl: 63, fov: 30, expo: 1.15, disk: 1, star: 0.8 }, // photon ring
-  { dist: 30, incl: 24, fov: 46, expo: 1.05, disk: 1, star: 0.9 }, // face-on
-  { dist: 16.5, incl: 78, fov: 68, expo: 0.95, disk: 1, star: 0.9 }, // near
-  { dist: 34, incl: 55, fov: 46, expo: 1.05, disk: 0.12, star: 1.7 }, // silhouette
-  { dist: 47, incl: 71, fov: 62, expo: 0.92, disk: 1, star: 1.1 }, // wide
+  { dist: 30, incl: 81, fov: 58, expo: 1.0, disk: 1, star: 1 }, // 0 signature
+  { dist: 27, incl: 86.5, fov: 50, expo: 1.0, disk: 1, star: 1 }, // 1 edge-on
+  { dist: 24, incl: 63, fov: 30, expo: 1.15, disk: 1, star: 0.8 }, // 2 photon ring
+  { dist: 30, incl: 24, fov: 46, expo: 1.05, disk: 1, star: 0.9 }, // 3 face-on
+  { dist: 16.5, incl: 78, fov: 68, expo: 0.95, disk: 1, star: 0.9 }, // 4 near
+  { dist: 34, incl: 55, fov: 46, expo: 1.05, disk: 0.12, star: 1.7 }, // 5 silhouette
+  { dist: 47, incl: 71, fov: 62, expo: 0.92, disk: 1, star: 1.1 }, // 6 wide
+  { dist: 26, incl: 89.6, fov: 44, expo: 1.05, disk: 1, star: 1 }, // 7 knife-edge
+  { dist: 26, incl: 13, fov: 44, expo: 1.1, disk: 1, star: 0.85 }, // 8 polar
 ]
 
 /** disk palettes: physical Planck temperature scales (hue only —
@@ -35,9 +37,10 @@ function Seg(props: {
   cur: string
   opts: [string, string][]
   on: (v: string) => void
+  grid?: boolean
 }) {
   return (
-    <span className="opts">
+    <div className={`wopts${props.grid ? ' wgrid3' : ''}`}>
       {props.opts.map(([v, label]) => (
         <span
           key={v}
@@ -52,7 +55,20 @@ function Seg(props: {
           {label}
         </span>
       ))}
-    </span>
+    </div>
+  )
+}
+
+/** two-line control group: label (+ live value) on top, control below */
+function Group(props: { label: string; value?: string; children: React.ReactNode }) {
+  return (
+    <div className="wctl">
+      <div className="wlab">
+        <span>{props.label}</span>
+        {props.value && <b>{props.value}</b>}
+      </div>
+      {props.children}
+    </div>
   )
 }
 
@@ -181,9 +197,11 @@ export default function Wallpaper() {
       st.ptx += (st.ptxT - st.ptx) * damp
       st.pty += (st.ptyT - st.pty) * damp
       const breath = Math.sin(st.clock * 0.18) * 0.5
+      // 89.8 cap keeps the knife-edge view a hair off the exact plane,
+      // where the thin-disk crossing test degenerates
       const incl = Math.min(
         Math.max(st.incl + breath + st.pty * 2.6 * set.parallax, 12),
-        88.5,
+        89.8,
       )
       const azim = st.azim + st.ptx * 0.07 * set.parallax
       const cam = cameraFrom(st.dist, incl, azim, st.fov)
@@ -325,24 +343,25 @@ export default function Wallpaper() {
         <div className="ht">Settings</div>
 
         <div className="wp-sec">scene</div>
-        <div className="wrow tall">
-          <dt>view</dt>
+        <Group label="view">
           <Seg
+            grid
             cur={String(s.view)}
             opts={[
               ['0', 'signature'],
               ['1', 'edge-on'],
+              ['7', 'knife-edge'],
               ['2', 'ring'],
-              ['3', 'face-on'],
               ['4', 'near'],
+              ['3', 'face-on'],
+              ['8', 'polar'],
               ['5', 'silhouette'],
               ['6', 'wide'],
             ]}
             on={(v) => setS({ ...s, view: Number(v) })}
           />
-        </div>
-        <div className="wrow">
-          <dt>palette</dt>
+        </Group>
+        <Group label="palette">
           <Seg
             cur={s.palette}
             opts={[
@@ -353,9 +372,8 @@ export default function Wallpaper() {
             ]}
             on={(v) => setS({ ...s, palette: v as WpSettings['palette'] })}
           />
-        </div>
-        <div className="wrow">
-          <dt>stars</dt>
+        </Group>
+        <Group label="stars" value={`${pct(s.stars)}%`}>
           <input
             type="range"
             min={0}
@@ -363,9 +381,8 @@ export default function Wallpaper() {
             value={pct(s.stars)}
             onChange={(e) => setS({ ...s, stars: Number(e.target.value) / 100 })}
           />
-        </div>
-        <div className="wrow">
-          <dt>drift</dt>
+        </Group>
+        <Group label="orbit drift" value={`${pct(s.drift)}%`}>
           <input
             type="range"
             min={0}
@@ -373,9 +390,8 @@ export default function Wallpaper() {
             value={pct(s.drift)}
             onChange={(e) => setS({ ...s, drift: Number(e.target.value) / 100 })}
           />
-        </div>
-        <div className="wrow">
-          <dt>parallax</dt>
+        </Group>
+        <Group label="parallax" value={`${pct(s.parallax)}%`}>
           <input
             type="range"
             min={0}
@@ -383,116 +399,119 @@ export default function Wallpaper() {
             value={pct(s.parallax)}
             onChange={(e) => setS({ ...s, parallax: Number(e.target.value) / 100 })}
           />
-        </div>
-        <div className="wrow">
-          <dt>trail</dt>
-          <Seg
-            cur={s.trail ? 'on' : 'off'}
-            opts={[
-              ['off', 'off'],
-              ['on', 'on'],
-            ]}
-            on={(v) => setS({ ...s, trail: v === 'on' })}
-          />
-        </div>
-        <div className="wrow">
-          <dt>quality</dt>
-          <Seg
-            cur={s.quality}
-            opts={[
-              ['auto', 'auto'],
-              ['eco', 'eco'],
-              ['max', 'max'],
-            ]}
-            on={(v) => setS({ ...s, quality: v as WpSettings['quality'] })}
-          />
+        </Group>
+        <div className="wpair">
+          <Group label="trail">
+            <Seg
+              cur={s.trail ? 'on' : 'off'}
+              opts={[
+                ['off', 'off'],
+                ['on', 'on'],
+              ]}
+              on={(v) => setS({ ...s, trail: v === 'on' })}
+            />
+          </Group>
+          <Group label="quality">
+            <Seg
+              cur={s.quality}
+              opts={[
+                ['auto', 'auto'],
+                ['eco', 'eco'],
+                ['max', 'max'],
+              ]}
+              on={(v) => setS({ ...s, quality: v as WpSettings['quality'] })}
+            />
+          </Group>
         </div>
 
         <div className="wp-sec">clock</div>
-        <div className="wrow">
-          <dt>mode</dt>
-          <Seg
-            cur={s.clock}
-            opts={[
-              ['off', 'off'],
-              ['24', '24h'],
-              ['12', '12h'],
-            ]}
-            on={(v) => setS({ ...s, clock: v as WpSettings['clock'] })}
-          />
-        </div>
-        {s.clock !== 'off' && (
-          <>
-            <div className="wrow">
-              <dt>style</dt>
+        <div className="wpair">
+          <Group label="mode">
+            <Seg
+              cur={s.clock}
+              opts={[
+                ['off', 'off'],
+                ['24', '24h'],
+                ['12', '12h'],
+              ]}
+              on={(v) => setS({ ...s, clock: v as WpSettings['clock'] })}
+            />
+          </Group>
+          {s.clock !== 'off' ? (
+            <Group label="style">
               <Seg
                 cur={s.clockStyle}
                 opts={[
                   ['hud', 'hud'],
-                  ['minimal', 'minimal'],
+                  ['minimal', 'min'],
                 ]}
                 on={(v) => setS({ ...s, clockStyle: v as WpSettings['clockStyle'] })}
               />
-            </div>
-            <div className="wrow">
-              <dt>position</dt>
+            </Group>
+          ) : (
+            <div />
+          )}
+        </div>
+        {s.clock !== 'off' && (
+          <>
+            <Group label="position">
               <Seg
                 cur={s.clockPos}
                 opts={[
-                  ['tl', 'tl'],
-                  ['tr', 'tr'],
-                  ['bl', 'bl'],
-                  ['bc', 'bc'],
-                  ['br', 'br'],
+                  ['tl', 'top·L'],
+                  ['tr', 'top·R'],
+                  ['bl', 'low·L'],
+                  ['bc', 'low·C'],
+                  ['br', 'low·R'],
                 ]}
                 on={(v) => setS({ ...s, clockPos: v as WpSettings['clockPos'] })}
               />
+            </Group>
+            <div className="wpair">
+              <Group label="size">
+                <Seg
+                  cur={s.clockSize}
+                  opts={[
+                    ['s', 's'],
+                    ['m', 'm'],
+                    ['l', 'l'],
+                  ]}
+                  on={(v) => setS({ ...s, clockSize: v as WpSettings['clockSize'] })}
+                />
+              </Group>
+              <Group label="accent">
+                <Seg
+                  cur={s.accent}
+                  opts={[
+                    ['cyan', 'cyan'],
+                    ['ember', 'ember'],
+                    ['mono', 'mono'],
+                  ]}
+                  on={(v) => setS({ ...s, accent: v as WpSettings['accent'] })}
+                />
+              </Group>
             </div>
-            <div className="wrow">
-              <dt>size</dt>
-              <Seg
-                cur={s.clockSize}
-                opts={[
-                  ['s', 's'],
-                  ['m', 'm'],
-                  ['l', 'l'],
-                ]}
-                on={(v) => setS({ ...s, clockSize: v as WpSettings['clockSize'] })}
-              />
-            </div>
-            <div className="wrow">
-              <dt>seconds</dt>
-              <Seg
-                cur={s.seconds ? 'on' : 'off'}
-                opts={[
-                  ['off', 'off'],
-                  ['on', 'on'],
-                ]}
-                on={(v) => setS({ ...s, seconds: v === 'on' })}
-              />
-            </div>
-            <div className="wrow">
-              <dt>date</dt>
-              <Seg
-                cur={s.date ? 'on' : 'off'}
-                opts={[
-                  ['off', 'hide'],
-                  ['on', 'show'],
-                ]}
-                on={(v) => setS({ ...s, date: v === 'on' })}
-              />
-            </div>
-            <div className="wrow">
-              <dt>accent</dt>
-              <Seg
-                cur={s.accent}
-                opts={[
-                  ['cyan', 'cyan'],
-                  ['ember', 'ember'],
-                  ['mono', 'mono'],
-                ]}
-                on={(v) => setS({ ...s, accent: v as WpSettings['accent'] })}
-              />
+            <div className="wpair">
+              <Group label="seconds">
+                <Seg
+                  cur={s.seconds ? 'on' : 'off'}
+                  opts={[
+                    ['off', 'off'],
+                    ['on', 'on'],
+                  ]}
+                  on={(v) => setS({ ...s, seconds: v === 'on' })}
+                />
+              </Group>
+              <Group label="date">
+                <Seg
+                  cur={s.date ? 'on' : 'off'}
+                  opts={[
+                    ['off', 'hide'],
+                    ['on', 'show'],
+                  ]}
+                  on={(v) => setS({ ...s, date: v === 'on' })}
+                />
+              </Group>
             </div>
           </>
         )}
