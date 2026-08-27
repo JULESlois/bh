@@ -155,6 +155,9 @@ export default function App() {
 
       const t = st.t
       const p = paramsAt(t, st.ptx, st.pty, st.drift, breath)
+      // portrait fitting: the fov keyframes are vertical; on tall screens
+      // preserve the horizontal field instead so the hole is never cropped
+      if (window.innerWidth < vh) p.tanHalfFov *= vh / window.innerWidth
       frameRef.current = p
 
       const focus = store.get().focus
@@ -235,7 +238,7 @@ export default function App() {
       if (wrap) {
         wrap.style.opacity = (st.shadowAnno * poster).toFixed(3)
         if (st.shadowAnno > 0.004) {
-          const rpx = shadowRadiusPx(p.dist, p.fovDeg, vh)
+          const rpx = shadowRadiusPx(p.dist, p.tanHalfFov, vh)
           const cx = window.innerWidth / 2
           const cy = vh / 2
           const circ = domRefs.annoCircle as SVGElement | null

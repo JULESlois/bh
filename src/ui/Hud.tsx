@@ -135,17 +135,19 @@ function CalloutView({ f, out }: { f: Focus; out?: boolean }) {
   const lineEndX = dirX === 1 ? bx : bx + BW
   const by = clamp(ey - 21, 10, vh - BH - 10)
   const o = out ? ' out' : ''
+  // the card unfolds out of the corner the polyline arrives at
+  const side = dirX === -1 ? ' from-right' : ''
 
   return (
     <>
-      {f.type === 'ray' && !out && (
-        <div className="reticle" style={{ left: f.x, top: f.y }} />
+      {f.type === 'ray' && (
+        <div className={`reticle${o}`} style={{ left: f.x, top: f.y }} />
       )}
       <svg className={`callout-line${o}`} width="100%" height="100%" aria-hidden>
         <polyline points={`${f.x},${f.y} ${ex},${ey} ${lineEndX},${ey}`} pathLength={1} />
       </svg>
       <aside
-        className={`callout${o}`}
+        className={`callout${o}${side}`}
         style={{ left: bx, top: by }}
         onClick={() => store.dismiss()}
       >

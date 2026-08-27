@@ -135,11 +135,12 @@ export function companionDir(azimOff = 0, inclOff = 0): Vec3 {
 /**
  * Angular radius of the shadow for a static observer at distance d:
  * sinθ = b_c·√(1 − r_s/d)/d — used for the screen-space dashed annotation.
+ * Takes the effective vertical tan(fov/2) so portrait fitting is honored.
  */
-export function shadowRadiusPx(dist: number, fovDeg: number, viewportH: number): number {
+export function shadowRadiusPx(dist: number, tanHalfFov: number, viewportH: number): number {
   const s = (B_CRIT * Math.sqrt(Math.max(1 - RS / dist, 0))) / dist
   const theta = Math.asin(Math.min(s, 1))
-  return (Math.tan(theta) / Math.tan(((fovDeg / 2) * Math.PI) / 180)) * (viewportH / 2)
+  return (Math.tan(theta) / tanHalfFov) * (viewportH / 2)
 }
 
 /** ray direction (world) for a viewport point, px/py in [-1,1], py up */

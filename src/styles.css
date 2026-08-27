@@ -344,9 +344,10 @@ canvas#gl {
 @keyframes lineDraw {
   to { stroke-dashoffset: 0; }
 }
-/* exit: the line retracts toward the click point */
+/* exit: the line retracts toward the click point, just after the card
+   has collapsed back onto it */
 .callout-line.out polyline {
-  animation: lineErase 0.24s ease-in forwards;
+  animation: lineErase 0.2s ease-in 0.08s both;
 }
 @keyframes lineErase {
   from { stroke-dashoffset: 0; }
@@ -372,15 +373,60 @@ canvas#gl {
     16px 100%,
     0 calc(100% - 16px)
   );
-  animation: calloutIn 0.4s cubic-bezier(0.2, 0.9, 0.25, 1) 0.18s backwards;
+  /* entrance: expand diagonally out of the corner the polyline arrives at,
+     timed so the card unfolds just as the line finishes drawing */
+  animation: cardGrow 0.34s cubic-bezier(0.2, 0.9, 0.25, 1) 0.26s backwards;
 }
+.callout.from-right {
+  animation-name: cardGrowR;
+}
+@keyframes cardGrow {
+  from {
+    clip-path: polygon(0 0, 0 0, 0 0, 0 0, 0 0, 0 0);
+    opacity: 0.35;
+  }
+  to {
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    opacity: 1;
+  }
+}
+@keyframes cardGrowR {
+  from {
+    clip-path: polygon(100% 0, 100% 0, 100% 0, 100% 0, 100% 0, 100% 0);
+    opacity: 0.35;
+  }
+  to {
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    opacity: 1;
+  }
+}
+/* exit: collapse back into the same corner */
 .callout.out {
-  animation: calloutOut 0.24s ease-in forwards;
+  animation: cardCollapse 0.2s ease-in forwards;
   pointer-events: none;
 }
-@keyframes calloutOut {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(6px); }
+.callout.out.from-right {
+  animation-name: cardCollapseR;
+}
+@keyframes cardCollapse {
+  from {
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    opacity: 1;
+  }
+  to {
+    clip-path: polygon(0 0, 0 0, 0 0, 0 0, 0 0, 0 0);
+    opacity: 0.25;
+  }
+}
+@keyframes cardCollapseR {
+  from {
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    opacity: 1;
+  }
+  to {
+    clip-path: polygon(100% 0, 100% 0, 100% 0, 100% 0, 100% 0, 100% 0);
+    opacity: 0.25;
+  }
 }
 /* instrument corner brackets instead of a boxed card */
 .callout::before,
@@ -473,6 +519,12 @@ canvas#gl {
   60% { opacity: 1; }
   to { transform: scale(1); opacity: 0.85; }
 }
+.reticle.out {
+  animation: retOut 0.16s ease-in forwards;
+}
+@keyframes retOut {
+  to { transform: scale(0.55); opacity: 0; }
+}
 
 /* ————— boot ————— */
 
@@ -522,7 +574,9 @@ canvas#gl {
 @media (max-width: 720px) {
   .rail .ro { display: none; }
   .sec { padding: 20px 18px 64px; }
-  .body { font-size: 13.5px; }
+  .body { font-size: 13.5px; max-width: 100%; }
+  .display { font-size: clamp(2rem, 9.5vw, 3.4rem); }
+  .display-xl { font-size: clamp(2.9rem, 15vw, 4.2rem); }
   .callout { width: 228px; }
 }
 
@@ -534,4 +588,5 @@ canvas#gl {
   .callout-line polyline { animation: none; stroke-dashoffset: 0; }
   .callout-line.out polyline { animation: none; opacity: 0; }
   .reticle { animation: none; opacity: 0.85; }
+  .reticle.out { animation: none; opacity: 0; }
 }

@@ -8,8 +8,8 @@ import { writeFileSync } from 'node:fs'
 import { paramsAt, companionDir, rayDir } from '../src/scene/timeline'
 import { RS, R_PHOTON, R_ISCO, R_OUT, R_ESC, T_DISP, NT_PEAK, TIME_SCALE } from '../src/physics/constants'
 
-const W = 640
-const H = 360
+const W = Number(process.env.RW) || 640
+const H = Number(process.env.RH) || 360
 const STEPS = 620
 const TIME = 26 * TIME_SCALE
 
@@ -303,6 +303,8 @@ const ts = process.argv.slice(2).map(Number)
 const list = ts.length ? ts : [0, 2, 3, 4.35]
 for (const t of list) {
   const p = paramsAt(t, 0, 0)
+  // portrait fitting, mirroring App.tsx: preserve the horizontal field
+  if (H > W) p.tanHalfFov *= H / W
   const u: Uni = { diskGain: p.diskGain, starGain: p.starGain, falseColor: p.falseColor }
   const hdr = new Float32Array(W * H * 3)
   const t0 = Date.now()
