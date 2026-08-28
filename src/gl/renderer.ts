@@ -16,6 +16,12 @@ export interface RenderParams {
   companionDir: [number, number, number]
   /** disk palette: Planck temperature scale, 1 = default ember */
   tempScale: number
+  /** outer disk radius in M (site default: R_OUT = 28) */
+  diskOut: number
+  /** turbulence strength 0..1 (site default 0.65) */
+  turb: number
+  /** bloom strength (site default 0.85) */
+  bloomAmt: number
 }
 
 interface Target {
@@ -193,6 +199,8 @@ export class Renderer {
     // angular size of one internal pixel — keeps star PSFs pixel-locked
     gl.uniform1f(this.loc(s, 'uPixAng'), (2 * p.tanHalfFov) / this.scene.h)
     gl.uniform1f(this.loc(s, 'uTempScale'), p.tempScale)
+    gl.uniform1f(this.loc(s, 'uDiskOut'), p.diskOut)
+    gl.uniform1f(this.loc(s, 'uTurb'), p.turb)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
     // ---- bright pass into quarter-res bloomA
@@ -232,6 +240,7 @@ export class Renderer {
     gl.uniform2f(this.loc(this.progComp, 'uRes'), this.canvas.width, this.canvas.height)
     gl.uniform1f(this.loc(this.progComp, 'uTime'), p.time)
     gl.uniform1f(this.loc(this.progComp, 'uExposure'), p.exposure)
+    gl.uniform1f(this.loc(this.progComp, 'uBloomAmt'), p.bloomAmt)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
     gl.activeTexture(gl.TEXTURE0)
   }

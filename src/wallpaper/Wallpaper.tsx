@@ -151,6 +151,9 @@ export default function Wallpaper() {
       disk: PRESETS[sRef.current.view].disk,
       star: PRESETS[sRef.current.view].star,
       temp: PALETTES[sRef.current.palette] ?? 1,
+      dout: 14 + 18 * sRef.current.diskSize,
+      turbV: sRef.current.turb,
+      diskClock: 0,
       lastSec: -1,
       lastClockKey: '',
     }
@@ -188,13 +191,17 @@ export default function Wallpaper() {
       st.azim += (dt / 1000) * (0.006 + set.drift * 0.03)
       const P = PRESETS[set.view]
       const k = 1 - Math.exp((-dt / 1000) * 2.2)
-      st.dist += (P.dist - st.dist) * k
-      st.incl += (P.incl - st.incl) * k
+      st.dist += (P.dist * (1.35 - 0.7 * set.zoom) - st.dist) * k
+      st.incl += (P.incl + (set.tilt - 0.5) * 20 - st.incl) * k
       st.fov += (P.fov - st.fov) * k
-      st.expo += (P.expo - st.expo) * k
-      st.disk += (P.disk - st.disk) * k
+      st.expo += (P.expo * (0.6 + 0.8 * set.expo) - st.expo) * k
+      st.disk += (P.disk * (0.4 + 1.2 * set.diskBright) - st.disk) * k
       st.star += (P.star - st.star) * k
       st.temp += ((PALETTES[set.palette] ?? 1) - st.temp) * k
+      st.dout += (14 + 18 * set.diskSize - st.dout) * k
+      st.turbV += (set.turb - st.turbV) * k
+      // separate disk clock so spin changes never jump the phase
+      st.diskClock += (dt / 1000) * TIME_SCALE * (set.spin * 2.2)
       const damp = 1 - Math.exp((-dt / 1000) * 3.2)
       st.ptx += (st.ptxT - st.ptx) * damp
       st.pty += (st.ptyT - st.pty) * damp
@@ -225,7 +232,7 @@ export default function Wallpaper() {
         up: cam.up,
         fwd: cam.fwd,
         tanHalfFov: thf,
-        time: st.clock * TIME_SCALE,
+        time: st.diskClock,
         diskGain: st.disk,
         starGain: (0.25 + 1.5 * set.stars) * st.star,
         falseColor: 0,
@@ -234,6 +241,9 @@ export default function Wallpaper() {
         markIsco: 0,
         companionDir: compDir,
         tempScale: st.temp,
+        diskOut: st.dout,
+        turb: st.turbV,
+        bloomAmt: 1.7 * set.glow,
       })
 
       // clock — bar/colon/float every frame, text only when the second flips
@@ -252,12 +262,14 @@ export default function Wallpaper() {
           clockRef.current.style.setProperty('--mx', `${fx.toFixed(1)}px`)
           clockRef.current.style.setProperty('--my', `${fy.toFixed(1)}px`)
         }
-        const key = `${set.clock}|${set.seconds}|${set.date}`
+        const key = `${set.clock}|${set.seconds}|${set.date}|${set.colon}`
         if (cs !== st.lastSec || key !== st.lastClockKey) {
           st.lastSec = cs
           st.lastClockKey = key
           const mm = String(d.getMinutes()).padStart(2, '0')
-          const ss = set.seconds ? `:${String(cs).padStart(2, '0')}` : ''
+          // colon "off" hides every separator, including before the seconds
+          const sep = set.colon === 'off' ? ' ' : ':'
+          const ss = set.seconds ? `${sep}${String(cs).padStart(2, '0')}` : ''
           const hr = d.getHours()
           if (set.clock === '24') {
             if (hRef.current) hRef.current.textContent = String(hr).padStart(2, '0')
@@ -311,6 +323,21 @@ export default function Wallpaper() {
   }, [])
 
   const pct = (x: number) => Math.round(x * 100)
+
+  type SliderKey =
+    | 'stars' | 'drift' | 'parallax' | 'tilt' | 'zoom'
+    | 'diskBright' | 'diskSize' | 'turb' | 'spin' | 'glow' | 'expo'
+  const slider = (label: string, key: SliderKey, fmt?: (x: number) => string) => (
+    <Group label={label} value={fmt ? fmt(s[key]) : `${pct(s[key])}%`}>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={pct(s[key])}
+        onChange={(e) => setS({ ...s, [key]: Number(e.target.value) / 100 } as WpSettings)}
+      />
+    </Group>
+  )
 
   return (
     <>
@@ -376,6 +403,12 @@ export default function Wallpaper() {
             on={(v) => setS({ ...s, view: Number(v) })}
           />
         </Group>
+        {slider('tilt', 'tilt', (x) => `${((x - 0.5) * 20).toFixed(0)}°`)}
+        {slider('zoom', 'zoom', (x) => `×${(1.35 - 0.7 * x).toFixed(2)}`)}
+        {slider('orbit drift', 'drift')}
+        {slider('parallax', 'parallax')}
+
+        <div className="wp-sec">disk</div>
         <Group label="palette">
           <Seg
             cur={s.palette}
@@ -388,33 +421,15 @@ export default function Wallpaper() {
             on={(v) => setS({ ...s, palette: v as WpSettings['palette'] })}
           />
         </Group>
-        <Group label="stars" value={`${pct(s.stars)}%`}>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={pct(s.stars)}
-            onChange={(e) => setS({ ...s, stars: Number(e.target.value) / 100 })}
-          />
-        </Group>
-        <Group label="orbit drift" value={`${pct(s.drift)}%`}>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={pct(s.drift)}
-            onChange={(e) => setS({ ...s, drift: Number(e.target.value) / 100 })}
-          />
-        </Group>
-        <Group label="parallax" value={`${pct(s.parallax)}%`}>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={pct(s.parallax)}
-            onChange={(e) => setS({ ...s, parallax: Number(e.target.value) / 100 })}
-          />
-        </Group>
+        {slider('brightness', 'diskBright')}
+        {slider('outer radius', 'diskSize', (x) => `${Math.round(14 + 18 * x)} M`)}
+        {slider('turbulence', 'turb')}
+        {slider('rotation', 'spin', (x) => `×${(x * 2.2).toFixed(1)}`)}
+
+        <div className="wp-sec">image</div>
+        {slider('stars', 'stars')}
+        {slider('glow', 'glow')}
+        {slider('exposure', 'expo', (x) => `×${(0.6 + 0.8 * x).toFixed(2)}`)}
         <div className="wpair">
           <Group label="trail">
             <Seg

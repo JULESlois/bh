@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Renderer } from './gl/renderer'
 import { paramsAt, companionDir, shadowRadiusPx, rayDir, SECTIONS, SECTION_VH, type FrameParams } from './scene/timeline'
-import { TIME_SCALE } from './physics/constants'
+import { TIME_SCALE, R_OUT } from './physics/constants'
 import { traceRay } from './physics/geodesic'
 import { store, markerLevels } from './store'
 import { domRefs, actions } from './ui/dom'
@@ -186,6 +186,9 @@ export default function App() {
         markIsco: markerLevels.isco,
         companionDir: companionDir(st.drift, breath),
         tempScale: 1,
+        diskOut: R_OUT,
+        turb: 0.65,
+        bloomAmt: 0.85,
       })
       store.setBooted()
 

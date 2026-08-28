@@ -63,6 +63,8 @@ uniform int uSteps;
 uniform float uStepScale;
 uniform float uPixAng; // angular size of one output pixel, radians
 uniform float uTempScale; // disk palette: scales the Planck temperature only
+uniform float uDiskOut;   // outer disk radius, M
+uniform float uTurb;      // 0..1 turbulence strength
 
 ${CONSTS}
 
@@ -223,7 +225,7 @@ vec3 diskShade(vec3 hp, float rC, float bAxis, out float alpha) {
   float n1 = fbmDisk(chi, rC * 0.55, 9.0);
   float n2 = fbmDisk(chi + 2.1, rC * 1.7 + 13.1, 24.0);
   float dens = 0.60 + 0.52 * n1 + 0.28 * (n2 - 0.5);
-  Tem *= mix(1.0, dens, 0.65);
+  Tem *= mix(1.0, dens, clamp(uTurb, 0.0, 1.0));
 
   Tem *= uTempScale;                                    // palette: hue shifts,
   float Tobs = g * Tem;                                 // Planck at g·T
@@ -231,8 +233,8 @@ vec3 diskShade(vec3 hp, float rC, float bAxis, out float alpha) {
   vec3 phys = blackbody(Tobs) * inten * 0.62 * max(uDiskGain, 1.0);
   phys = mix(vec3(dot(phys, vec3(0.2126, 0.7152, 0.0722))), phys, 1.22);
 
-  alpha = smoothstep(R_ISCO, R_ISCO + 0.8, rC) * (1.0 - smoothstep(R_OUT - 6.5, R_OUT, rC));
-  alpha *= 0.55 + 0.45 * smoothstep(0.15, 0.75, n1);
+  alpha = smoothstep(R_ISCO, R_ISCO + 0.8, rC) * (1.0 - smoothstep(uDiskOut - 6.5, uDiskOut, rC));
+  alpha *= mix(1.0, 0.55 + 0.45 * smoothstep(0.15, 0.75, n1), clamp(uTurb, 0.0, 1.0));
   alpha = clamp(alpha, 0.0, 0.96) * clamp(uDiskGain, 0.0, 1.0);
 
   vec3 fc = gRamp(g) * (0.4 + 0.6 * smoothstep(0.1, 0.9, dens));
@@ -322,7 +324,7 @@ void main() {
       float uC = ru + hr * (r1u + 2.0 * r2u + 2.0 * r3u + r4u) / 6.0;
       float phiC = phiPrev + hr;
       float rC = 1.0 / uC;
-      if (rC < R_OUT + 2.0) {
+      if (rC < uDiskOut + 2.0) {
         vec3 hp = (cos(phiC) * e1 + sin(phiC) * e2) * rC;
 
         // annotation rings — ray-traced like everything else, so they lens
@@ -341,7 +343,7 @@ void main() {
           }
         }
 
-        if (rC >= R_ISCO && rC <= R_OUT) {
+        if (rC >= R_ISCO && rC <= uDiskOut) {
           float alpha;
           vec3 em = diskShade(hp, rC, bAxis, alpha);
           col += trans * alpha * em;
@@ -414,6 +416,7 @@ uniform sampler2D uBloom;
 uniform vec2 uRes;
 uniform float uTime;
 uniform float uExposure;
+uniform float uBloomAmt;
 
 vec3 aces(vec3 x) {
   const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
@@ -437,7 +440,7 @@ void main() {
   scene.b = texture(uScene, vUv - c * ca).b;
 
   vec3 bloom = texture(uBloom, vUv).rgb;
-  vec3 col = scene + bloom * 0.85;
+  vec3 col = scene + bloom * uBloomAmt;
 
   col *= uExposure;
   col *= 1.0 - 0.42 * smoothstep(0.12, 0.62, r2);        // vignette

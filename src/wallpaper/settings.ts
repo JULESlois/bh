@@ -35,6 +35,22 @@ export interface WpSettings {
   /** 0..1 — orbital drift speed */
   drift: number
   quality: 'auto' | 'eco' | 'max'
+  /** 0..1 → ±10° inclination offset on the chosen view (0.5 = none) */
+  tilt: number
+  /** 0..1 → camera distance ×1.35 … ×0.65 (0.5 = preset framing) */
+  zoom: number
+  /** 0..1 → disk emission gain ×0.4 … ×1.6 (0.5 = canonical) */
+  diskBright: number
+  /** 0..1 → outer disk radius 14 … 32 M (canonical 28 M ≈ 0.78) */
+  diskSize: number
+  /** 0..1 — turbulence strength (canonical 0.65) */
+  turb: number
+  /** 0..1 → disk rotation speed ×0 … ×2.2 (0.45 ≈ real-time pace) */
+  spin: number
+  /** 0..1 → bloom strength 0 … 1.7 (0.5 = canonical 0.85) */
+  glow: number
+  /** 0..1 → exposure ×0.6 … ×1.4 (0.5 = neutral) */
+  expo: number
 }
 
 export const DEFAULTS: WpSettings = {
@@ -56,6 +72,14 @@ export const DEFAULTS: WpSettings = {
   trail: false,
   drift: 0.45,
   quality: 'auto',
+  tilt: 0.5,
+  zoom: 0.5,
+  diskBright: 0.5,
+  diskSize: 0.78,
+  turb: 0.65,
+  spin: 0.45,
+  glow: 0.5,
+  expo: 0.5,
 }
 
 const KEY = 'schwarzschild-wallpaper'
@@ -140,13 +164,28 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
       if (props.accent?.value !== undefined)
         patch.accent = pick(props.accent.value, ['cyan', 'ember', 'mono'] as const)
       if (props.clockfloat?.value !== undefined) patch.float = !!props.clockfloat.value
-      if (props.stars?.value !== undefined)
-        patch.stars = Math.min(Math.max(Number(props.stars.value) / 100, 0), 1)
-      if (props.parallax?.value !== undefined)
-        patch.parallax = Math.min(Math.max(Number(props.parallax.value) / 100, 0), 1)
+      const sliders: [string, keyof WpSettings][] = [
+        ['stars', 'stars'],
+        ['parallax', 'parallax'],
+        ['drift', 'drift'],
+        ['tilt', 'tilt'],
+        ['zoom', 'zoom'],
+        ['diskbright', 'diskBright'],
+        ['disksize', 'diskSize'],
+        ['turbulence', 'turb'],
+        ['spin', 'spin'],
+        ['glow', 'glow'],
+        ['exposure', 'expo'],
+      ]
+      for (const [prop, key] of sliders) {
+        if (props[prop]?.value !== undefined) {
+          ;(patch as Record<string, unknown>)[key] = Math.min(
+            Math.max(Number(props[prop].value) / 100, 0),
+            1,
+          )
+        }
+      }
       if (props.trail?.value !== undefined) patch.trail = !!props.trail.value
-      if (props.drift?.value !== undefined)
-        patch.drift = Math.min(Math.max(Number(props.drift.value) / 100, 0), 1)
       if (props.quality?.value !== undefined)
         patch.quality = pick(props.quality.value, ['auto', 'eco', 'max'] as const)
       // drop undefined entries from failed picks
