@@ -12,9 +12,12 @@
 .wp-clock {
   position: fixed;
   z-index: 5;
-  pointer-events: none;
+  pointer-events: auto; /* enables the hover readout */
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.65);
   --acc: var(--cyan);
+  --mx: 0px; /* mouse-float offsets, written by the loop */
+  --my: 0px;
+  transform: translate(var(--mx), var(--my));
 }
 .wp-clock.ac-ember { --acc: var(--ember); }
 .wp-clock.ac-mono { --acc: var(--ink); }
@@ -24,7 +27,12 @@
 .wp-clock.p-br { right: clamp(26px, 5vw, 84px); bottom: clamp(26px, 6vh, 76px); text-align: right; }
 .wp-clock.p-tl { left: clamp(26px, 5vw, 84px); top: clamp(26px, 6vh, 76px); }
 .wp-clock.p-tr { right: clamp(70px, 7vw, 110px); top: clamp(26px, 6vh, 76px); text-align: right; }
-.wp-clock.p-bc { left: 50%; bottom: clamp(26px, 6vh, 76px); transform: translateX(-50%); text-align: center; }
+.wp-clock.p-bc {
+  left: 50%;
+  bottom: clamp(26px, 6vh, 76px);
+  transform: translate(calc(-50% + var(--mx)), var(--my));
+  text-align: center;
+}
 
 .wp-clock .t {
   font: 500 clamp(40px, 5.4vw, 72px) / 1 var(--font-m);
@@ -34,6 +42,21 @@
 }
 .wp-clock.sz-s .t { font-size: clamp(26px, 3.2vw, 42px); }
 .wp-clock.sz-l .t { font-size: clamp(54px, 8vw, 116px); }
+
+/* typefaces */
+.wp-clock.f-display .t {
+  font-family: var(--font-d);
+  font-weight: 900;
+  font-stretch: 116%;
+  letter-spacing: 0.01em;
+}
+.wp-clock.f-thin .t {
+  font-family: var(--font-d);
+  font-weight: 250;
+  font-stretch: 105%;
+  letter-spacing: 0.07em;
+}
+
 .wp-clock .t .col {
   color: var(--acc);
   transition: opacity 0.12s;
@@ -53,25 +76,25 @@
   color: var(--dim);
 }
 
-/* hud style: bracketed instrument with a sweeping seconds bar */
-.wp-clock.st-hud {
+/* border brackets (component toggle) */
+.wp-clock.wc-br {
   padding: 16px 20px 14px;
 }
-.wp-clock.st-hud::before,
-.wp-clock.st-hud::after {
+.wp-clock.wc-br::before,
+.wp-clock.wc-br::after {
   content: '';
   position: absolute;
   width: 15px;
   height: 15px;
   opacity: 0.85;
 }
-.wp-clock.st-hud::before {
+.wp-clock.wc-br::before {
   top: 0;
   left: 0;
   border-top: 1px solid var(--acc);
   border-left: 1px solid var(--acc);
 }
-.wp-clock.st-hud::after {
+.wp-clock.wc-br::after {
   bottom: 0;
   right: 0;
   border-bottom: 1px solid var(--acc);
@@ -87,6 +110,23 @@
   height: 100%;
   width: 0;
   background: var(--acc);
+}
+
+/* hover readout — surfaces only while the cursor rests on the clock */
+.wp-clock .x {
+  max-height: 0;
+  overflow: hidden;
+  margin-top: 0;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--acc);
+  opacity: 0;
+  transition: opacity 0.3s, max-height 0.3s, margin-top 0.3s;
+}
+.wp-clock:hover .x {
+  max-height: 16px;
+  margin-top: 7px;
+  opacity: 0.85;
 }
 
 /* hidden hotspot: invisible until hovered, then a corner bracket */

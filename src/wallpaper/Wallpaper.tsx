@@ -81,6 +81,8 @@ export default function Wallpaper() {
   const secRef = useRef<HTMLElement>(null)
   const barRef = useRef<HTMLElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
+  const xRef = useRef<HTMLDivElement>(null)
+  const clockRef = useRef<HTMLDivElement>(null)
   const rendererRef = useRef<Renderer | null>(null)
   const [s, setS] = useState<WpSettings>(load)
   const sRef = useRef(s)
@@ -234,17 +236,23 @@ export default function Wallpaper() {
         tempScale: st.temp,
       })
 
-      // clock — bar and colon every frame, text only when the second flips
+      // clock — bar/colon/float every frame, text only when the second flips
       if (set.clock !== 'off') {
         const d = new Date()
         const ms = d.getMilliseconds()
         const cs = d.getSeconds()
         if (colRef.current)
           colRef.current.style.opacity =
-            set.clockStyle === 'hud' && ms >= 500 ? '0.22' : '1'
+            set.colon === 'blink' && ms >= 500 ? '0.22' : '1'
         if (barRef.current)
           barRef.current.style.width = `${(((cs + ms / 1000) / 60) * 100).toFixed(2)}%`
-        const key = `${set.clock}|${set.seconds}|${set.clockStyle}|${set.date}`
+        if (clockRef.current) {
+          const fx = set.float ? -st.ptx * 12 : 0
+          const fy = set.float ? -st.pty * 9 : 0
+          clockRef.current.style.setProperty('--mx', `${fx.toFixed(1)}px`)
+          clockRef.current.style.setProperty('--my', `${fy.toFixed(1)}px`)
+        }
+        const key = `${set.clock}|${set.seconds}|${set.date}`
         if (cs !== st.lastSec || key !== st.lastClockKey) {
           st.lastSec = cs
           st.lastClockKey = key
@@ -263,10 +271,13 @@ export default function Wallpaper() {
             const doy = Math.floor(
               (d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 864e5,
             )
+            const wk = Math.max(1, Math.ceil(doy / 7))
             dateRef.current.textContent =
               `${DAYS[d.getDay()]} · ${MONTHS[d.getMonth()]} ${d.getDate()}` +
-              (set.clockStyle === 'hud' ? ` · DOY ${doy}` : '')
+              (set.date === 'full' ? ` · DOY ${doy} · WK ${wk}` : '')
           }
+          if (xRef.current)
+            xRef.current.textContent = `UNIX ${Math.floor(d.getTime() / 1000)}`
         }
       }
 
@@ -308,22 +319,26 @@ export default function Wallpaper() {
 
       {s.clock !== 'off' && (
         <div
-          className={`wp-clock p-${s.clockPos} sz-${s.clockSize} ac-${s.accent} st-${s.clockStyle}`}
+          ref={clockRef}
+          className={`wp-clock p-${s.clockPos} sz-${s.clockSize} ac-${s.accent} f-${s.font}${s.brackets ? ' wc-br' : ''}`}
         >
           <div className="t">
             <span ref={hRef} />
-            <span className="col" ref={colRef}>
-              :
-            </span>
+            {s.colon !== 'off' && (
+              <span className="col" ref={colRef}>
+                :
+              </span>
+            )}
             <span ref={mRef} />
             <i ref={secRef} />
           </div>
-          {s.clockStyle === 'hud' && (
+          {s.bar && (
             <div className="sbar">
               <i ref={barRef} />
             </div>
           )}
-          {s.date && <div className="d" ref={dateRef} />}
+          {s.date !== 'off' && <div className="d" ref={dateRef} />}
+          <div className="x" ref={xRef} />
         </div>
       )}
 
@@ -438,14 +453,15 @@ export default function Wallpaper() {
             />
           </Group>
           {s.clock !== 'off' ? (
-            <Group label="style">
+            <Group label="font">
               <Seg
-                cur={s.clockStyle}
+                cur={s.font}
                 opts={[
-                  ['hud', 'hud'],
-                  ['minimal', 'min'],
+                  ['mono', 'mono'],
+                  ['display', 'disp'],
+                  ['thin', 'thin'],
                 ]}
-                on={(v) => setS({ ...s, clockStyle: v as WpSettings['clockStyle'] })}
+                on={(v) => setS({ ...s, font: v as WpSettings['font'] })}
               />
             </Group>
           ) : (
@@ -492,6 +508,39 @@ export default function Wallpaper() {
               </Group>
             </div>
             <div className="wpair">
+              <Group label="colon">
+                <Seg
+                  cur={s.colon}
+                  opts={[
+                    ['blink', 'blink'],
+                    ['on', 'on'],
+                    ['off', 'off'],
+                  ]}
+                  on={(v) => setS({ ...s, colon: v as WpSettings['colon'] })}
+                />
+              </Group>
+              <Group label="border">
+                <Seg
+                  cur={s.brackets ? 'on' : 'off'}
+                  opts={[
+                    ['off', 'off'],
+                    ['on', 'on'],
+                  ]}
+                  on={(v) => setS({ ...s, brackets: v === 'on' })}
+                />
+              </Group>
+            </div>
+            <div className="wpair">
+              <Group label="sec bar">
+                <Seg
+                  cur={s.bar ? 'on' : 'off'}
+                  opts={[
+                    ['off', 'off'],
+                    ['on', 'on'],
+                  ]}
+                  on={(v) => setS({ ...s, bar: v === 'on' })}
+                />
+              </Group>
               <Group label="seconds">
                 <Seg
                   cur={s.seconds ? 'on' : 'off'}
@@ -502,14 +551,27 @@ export default function Wallpaper() {
                   on={(v) => setS({ ...s, seconds: v === 'on' })}
                 />
               </Group>
+            </div>
+            <div className="wpair">
               <Group label="date">
                 <Seg
-                  cur={s.date ? 'on' : 'off'}
+                  cur={s.date}
                   opts={[
-                    ['off', 'hide'],
-                    ['on', 'show'],
+                    ['off', 'off'],
+                    ['date', 'date'],
+                    ['full', 'full'],
                   ]}
-                  on={(v) => setS({ ...s, date: v === 'on' })}
+                  on={(v) => setS({ ...s, date: v as WpSettings['date'] })}
+                />
+              </Group>
+              <Group label="mouse float">
+                <Seg
+                  cur={s.float ? 'on' : 'off'}
+                  opts={[
+                    ['off', 'off'],
+                    ['on', 'on'],
+                  ]}
+                  on={(v) => setS({ ...s, float: v === 'on' })}
                 />
               </Group>
             </div>
