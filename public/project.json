@@ -1,7 +1,7 @@
 {
   "contentrating": "Everyone",
   "title": "SCHWARZSCHILD",
-  "description": "A general-relativistic black hole, ray-traced live on your GPU: every pixel integrates the Schwarzschild geodesic equation. Clock, mouse parallax and trail options — or click the hidden top-right corner for the in-page settings panel.",
+  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Off-axis composition presets, observatory clock, mouse parallax, subtle transient disk events and directional bloom.",
   "file": "wallpaper.html",
   "type": "web",
   "tags": [
@@ -10,359 +10,157 @@
   ],
   "general": {
     "properties": {
+      "composition": {
+        "order": 99,
+        "text": "Composition",
+        "type": "combo",
+        "value": "cinematic",
+        "options": [
+          { "label": "Cinematic", "value": "cinematic" },
+          { "label": "Horizon", "value": "horizon" },
+          { "label": "Terminal", "value": "terminal" },
+          { "label": "Centered", "value": "centered" },
+          { "label": "Void", "value": "void" },
+          { "label": "Close pass", "value": "close" }
+        ]
+      },
       "view": {
         "order": 100,
         "text": "View",
         "type": "combo",
         "value": "0",
         "options": [
-          {
-            "label": "Signature",
-            "value": "0"
-          },
-          {
-            "label": "Edge-on",
-            "value": "1"
-          },
-          {
-            "label": "Photon ring",
-            "value": "2"
-          },
-          {
-            "label": "Face-on",
-            "value": "3"
-          },
-          {
-            "label": "Near",
-            "value": "4"
-          },
-          {
-            "label": "Silhouette",
-            "value": "5"
-          },
-          {
-            "label": "Wide",
-            "value": "6"
-          },
-          {
-            "label": "Knife-edge",
-            "value": "7"
-          },
-          {
-            "label": "Polar",
-            "value": "8"
-          }
+          { "label": "Signature", "value": "0" },
+          { "label": "Edge-on", "value": "1" },
+          { "label": "Photon ring", "value": "2" },
+          { "label": "Face-on", "value": "3" },
+          { "label": "Near", "value": "4" },
+          { "label": "Silhouette", "value": "5" },
+          { "label": "Wide", "value": "6" },
+          { "label": "Knife-edge", "value": "7" },
+          { "label": "Polar", "value": "8" }
         ]
       },
+      "tilt": { "order": 101, "text": "Tilt", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "zoom": { "order": 102, "text": "Zoom", "type": "slider", "value": 50, "min": 0, "max": 100 },
       "palette": {
         "order": 103,
         "text": "Disk palette",
         "type": "combo",
         "value": "ember",
         "options": [
-          {
-            "label": "Crimson (3 100 K)",
-            "value": "crimson"
-          },
-          {
-            "label": "Ember (5 000 K)",
-            "value": "ember"
-          },
-          {
-            "label": "Gold (5 900 K)",
-            "value": "gold"
-          },
-          {
-            "label": "Blue (9 000 K)",
-            "value": "blue"
-          }
+          { "label": "Crimson (3 100 K)", "value": "crimson" },
+          { "label": "Ember (5 000 K)", "value": "ember" },
+          { "label": "Gold (5 900 K)", "value": "gold" },
+          { "label": "Blue (9 000 K)", "value": "blue" }
         ]
       },
-      "clock": {
-        "order": 115,
-        "text": "Clock",
-        "type": "combo",
-        "value": "24",
-        "options": [
-          {
-            "label": "Off",
-            "value": "off"
-          },
-          {
-            "label": "24-hour",
-            "value": "24"
-          },
-          {
-            "label": "12-hour",
-            "value": "12"
-          }
-        ]
-      },
-      "clockfont": {
-        "order": 116,
-        "text": "Clock font",
-        "type": "combo",
-        "value": "mono",
-        "options": [
-          {
-            "label": "Mono",
-            "value": "mono"
-          },
-          {
-            "label": "Display",
-            "value": "display"
-          },
-          {
-            "label": "Thin",
-            "value": "thin"
-          }
-        ]
-      },
-      "clockpos": {
-        "order": 117,
-        "text": "Clock position",
-        "type": "combo",
-        "value": "bl",
-        "options": [
-          {
-            "label": "Top left",
-            "value": "tl"
-          },
-          {
-            "label": "Top right",
-            "value": "tr"
-          },
-          {
-            "label": "Bottom left",
-            "value": "bl"
-          },
-          {
-            "label": "Bottom center",
-            "value": "bc"
-          },
-          {
-            "label": "Bottom right",
-            "value": "br"
-          }
-        ]
-      },
-      "clocksize": {
-        "order": 118,
-        "text": "Clock size",
-        "type": "combo",
-        "value": "m",
-        "options": [
-          {
-            "label": "Small",
-            "value": "s"
-          },
-          {
-            "label": "Medium",
-            "value": "m"
-          },
-          {
-            "label": "Large",
-            "value": "l"
-          }
-        ]
-      },
-      "seconds": {
-        "order": 119,
-        "text": "Seconds",
-        "type": "bool",
-        "value": true
-      },
-      "colonmode": {
-        "order": 120,
-        "text": "Colon",
-        "type": "combo",
-        "value": "blink",
-        "options": [
-          {
-            "label": "Blinking",
-            "value": "blink"
-          },
-          {
-            "label": "Solid",
-            "value": "on"
-          },
-          {
-            "label": "Hidden",
-            "value": "off"
-          }
-        ]
-      },
-      "brackets": {
-        "order": 121,
-        "text": "Border brackets",
-        "type": "bool",
-        "value": true
-      },
-      "secondsbar": {
-        "order": 122,
-        "text": "Seconds bar",
-        "type": "bool",
-        "value": true
-      },
-      "clockfloat": {
-        "order": 123,
-        "text": "Clock mouse float",
-        "type": "bool",
-        "value": false
-      },
-      "showdate": {
-        "order": 124,
-        "text": "Date",
-        "type": "combo",
-        "value": "date",
-        "options": [
-          {
-            "label": "Off",
-            "value": "off"
-          },
-          {
-            "label": "Date",
-            "value": "date"
-          },
-          {
-            "label": "Date + DOY + week",
-            "value": "full"
-          }
-        ]
-      },
-      "accent": {
-        "order": 125,
-        "text": "Accent",
-        "type": "combo",
-        "value": "cyan",
-        "options": [
-          {
-            "label": "Cyan",
-            "value": "cyan"
-          },
-          {
-            "label": "Ember",
-            "value": "ember"
-          },
-          {
-            "label": "Mono",
-            "value": "mono"
-          }
-        ]
-      },
-      "stars": {
-        "order": 108,
-        "text": "Star field",
-        "type": "slider",
-        "value": 50,
-        "min": 0,
-        "max": 100
-      },
-      "parallax": {
-        "order": 112,
-        "text": "Mouse parallax",
-        "type": "slider",
-        "value": 50,
-        "min": 0,
-        "max": 100
-      },
-      "trail": {
-        "order": 113,
-        "text": "Mouse trail",
-        "type": "bool",
-        "value": false
-      },
-      "drift": {
-        "order": 111,
-        "text": "Orbit drift",
-        "type": "slider",
-        "value": 45,
-        "min": 0,
-        "max": 100
-      },
+      "diskbright": { "order": 104, "text": "Disk brightness", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "disksize": { "order": 105, "text": "Disk outer radius", "type": "slider", "value": 78, "min": 0, "max": 100 },
+      "turbulence": { "order": 106, "text": "Disk turbulence", "type": "slider", "value": 65, "min": 0, "max": 100 },
+      "spin": { "order": 107, "text": "Disk rotation", "type": "slider", "value": 45, "min": 0, "max": 100 },
+      "stars": { "order": 108, "text": "Star field", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "glow": { "order": 109, "text": "Bloom", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "streak": { "order": 110, "text": "Directional streak", "type": "slider", "value": 34, "min": 0, "max": 100 },
+      "exposure": { "order": 111, "text": "Exposure", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "drift": { "order": 112, "text": "Orbit drift", "type": "slider", "value": 45, "min": 0, "max": 100 },
+      "parallax": { "order": 113, "text": "Mouse parallax", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "trail": { "order": 114, "text": "Mouse trail", "type": "bool", "value": false },
       "quality": {
-        "order": 114,
+        "order": 115,
         "text": "Quality",
         "type": "combo",
         "value": "auto",
         "options": [
-          {
-            "label": "Auto",
-            "value": "auto"
-          },
-          {
-            "label": "Eco",
-            "value": "eco"
-          },
-          {
-            "label": "Max",
-            "value": "max"
-          }
+          { "label": "Auto", "value": "auto" },
+          { "label": "Eco", "value": "eco" },
+          { "label": "Max", "value": "max" }
         ]
       },
-      "tilt": {
-        "order": 101,
-        "text": "Tilt",
-        "type": "slider",
-        "value": 50,
-        "min": 0,
-        "max": 100
+      "clock": {
+        "order": 120,
+        "text": "Clock",
+        "type": "combo",
+        "value": "24",
+        "options": [
+          { "label": "Off", "value": "off" },
+          { "label": "24-hour", "value": "24" },
+          { "label": "12-hour", "value": "12" }
+        ]
       },
-      "zoom": {
-        "order": 102,
-        "text": "Zoom",
-        "type": "slider",
-        "value": 50,
-        "min": 0,
-        "max": 100
+      "clockfont": {
+        "order": 121,
+        "text": "Clock font",
+        "type": "combo",
+        "value": "thin",
+        "options": [
+          { "label": "Mono", "value": "mono" },
+          { "label": "Display", "value": "display" },
+          { "label": "Thin", "value": "thin" }
+        ]
       },
-      "diskbright": {
-        "order": 104,
-        "text": "Disk brightness",
-        "type": "slider",
-        "value": 50,
-        "min": 0,
-        "max": 100
+      "clockpos": {
+        "order": 122,
+        "text": "Clock position",
+        "type": "combo",
+        "value": "auto",
+        "options": [
+          { "label": "Auto (composition)", "value": "auto" },
+          { "label": "Top left", "value": "tl" },
+          { "label": "Top right", "value": "tr" },
+          { "label": "Bottom left", "value": "bl" },
+          { "label": "Bottom center", "value": "bc" },
+          { "label": "Bottom right", "value": "br" }
+        ]
       },
-      "disksize": {
-        "order": 105,
-        "text": "Disk outer radius",
-        "type": "slider",
-        "value": 78,
-        "min": 0,
-        "max": 100
+      "clocksize": {
+        "order": 123,
+        "text": "Clock size",
+        "type": "combo",
+        "value": "m",
+        "options": [
+          { "label": "Small", "value": "s" },
+          { "label": "Medium", "value": "m" },
+          { "label": "Large", "value": "l" }
+        ]
       },
-      "turbulence": {
-        "order": 106,
-        "text": "Disk turbulence",
-        "type": "slider",
-        "value": 65,
-        "min": 0,
-        "max": 100
+      "seconds": { "order": 124, "text": "Seconds", "type": "bool", "value": false },
+      "colonmode": {
+        "order": 125,
+        "text": "Colon",
+        "type": "combo",
+        "value": "on",
+        "options": [
+          { "label": "Blinking", "value": "blink" },
+          { "label": "Solid", "value": "on" },
+          { "label": "Hidden", "value": "off" }
+        ]
       },
-      "spin": {
-        "order": 107,
-        "text": "Disk rotation",
-        "type": "slider",
-        "value": 45,
-        "min": 0,
-        "max": 100
+      "brackets": { "order": 126, "text": "Border brackets", "type": "bool", "value": false },
+      "secondsbar": { "order": 127, "text": "Minute orbital scale", "type": "bool", "value": true },
+      "clockfloat": { "order": 128, "text": "Clock mouse float", "type": "bool", "value": false },
+      "showdate": {
+        "order": 129,
+        "text": "Date",
+        "type": "combo",
+        "value": "date",
+        "options": [
+          { "label": "Off", "value": "off" },
+          { "label": "Date", "value": "date" },
+          { "label": "Date + DOY + week", "value": "full" }
+        ]
       },
-      "glow": {
-        "order": 109,
-        "text": "Glow",
-        "type": "slider",
-        "value": 50,
-        "min": 0,
-        "max": 100
-      },
-      "exposure": {
-        "order": 110,
-        "text": "Exposure",
-        "type": "slider",
-        "value": 50,
-        "min": 0,
-        "max": 100
+      "accent": {
+        "order": 130,
+        "text": "Accent",
+        "type": "combo",
+        "value": "auto",
+        "options": [
+          { "label": "Auto (disk palette)", "value": "auto" },
+          { "label": "Cyan", "value": "cyan" },
+          { "label": "Warm", "value": "ember" },
+          { "label": "Mono", "value": "mono" }
+        ]
       }
     }
   }

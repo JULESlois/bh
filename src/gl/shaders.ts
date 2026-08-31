@@ -48,11 +48,13 @@ out vec4 outColor;
 
 uniform vec2 uRes;
 uniform float uTime;
+uniform float uWallTime;
 uniform vec3 uCamPos;
 uniform vec3 uCamRight;
 uniform vec3 uCamUp;
 uniform vec3 uCamFwd;
 uniform float uTanHalfFov;
+uniform vec2 uLensShift;
 uniform float uDiskGain;
 uniform float uStarGain;
 uniform float uFalseColor;
@@ -188,8 +190,21 @@ vec3 galaxy(vec3 d) {
   return c * g;
 }
 
+// Broad, nearly achromatic molecular dust. It removes starlight instead of
+// adding another colourful nebula layer, giving the background real depth.
+float molecularTransmission(vec3 d) {
+  vec3 a = normalize(vec3(0.71, -0.24, 0.66));
+  vec3 b = normalize(vec3(-0.31, 0.91, 0.27));
+  vec2 p = vec2(dot(d, a), dot(d, b));
+  float broad = fbm(p * 2.45 + vec2(4.8, 1.7));
+  float filament = fbm(p * 5.7 + vec2(-2.1, 8.4));
+  float cloud = smoothstep(0.49, 0.79, broad * 0.72 + filament * 0.28);
+  return mix(1.0, 0.56, cloud * 0.58);
+}
+
 vec3 sky(vec3 d) {
-  vec3 c = stars(d) + galaxy(d) + vec3(0.0016, 0.0018, 0.0024);
+  float trans = molecularTransmission(d);
+  vec3 c = (stars(d) + galaxy(d)) * trans + vec3(0.0016, 0.0018, 0.0024);
   c *= uStarGain;
   // companion star — a real point source that can pass behind the hole
   float ca = max(dot(d, uCompanionDir), 0.0);
@@ -227,6 +242,27 @@ vec3 diskShade(vec3 hp, float rC, float bAxis, out float alpha) {
   float dens = 0.60 + 0.52 * n1 + 0.28 * (n2 - 0.5);
   Tem *= mix(1.0, dens, clamp(uTurb, 0.0, 1.0));
 
+  // A rare, slow hot patch. Radius-dependent orbital advance shears it into
+  // a short arc, then it fades. It is intentionally subtle and infrequent so
+  // the wallpaper reads as stable most of the time rather than as a screensaver.
+  const float flareCycle = 211.0;
+  float eventClock = uWallTime + 103.0;
+  float phase = mod(eventClock, flareCycle);
+  float eventId = floor(eventClock / flareCycle);
+  float seedA = hash12(vec2(eventId, 19.71));
+  float seedR = hash12(vec2(eventId, 83.17));
+  float startAz = (seedA * 2.0 - 1.0) * PI;
+  float centerR = mix(7.4, 12.2, seedR);
+  float age = max(phase - 7.0, 0.0);
+  float envelope = smoothstep(3.0, 12.0, phase) * (1.0 - smoothstep(43.0, 70.0, phase));
+  float adv = Om * age * 8.2;
+  float dAz = atan(sin(phiAz - startAz - adv), cos(phiAz - startAz - adv));
+  float arcWidth = mix(0.18, 0.075, clamp(age / 55.0, 0.0, 1.0));
+  float hot = exp(-(dAz * dAz) / (arcWidth * arcWidth));
+  float dr = (rC - centerR) / 2.8;
+  hot *= exp(-dr * dr);
+  Tem *= 1.0 + hot * envelope * 0.19;
+
   Tem *= uTempScale;                                    // palette: hue shifts,
   float Tobs = g * Tem;                                 // Planck at g·T
   float inten = pow(Tobs / (T_DISP * uTempScale), 4.0); // luminance renormalized
@@ -242,7 +278,9 @@ vec3 diskShade(vec3 hp, float rC, float bAxis, out float alpha) {
 }
 
 void main() {
-  vec2 ndc = vUv * 2.0 - 1.0;
+  // Lens shift changes the optical axis rather than moving the finished
+  // canvas, so off-centre compositions remain part of the ray trace.
+  vec2 ndc = vUv * 2.0 - 1.0 - uLensShift;
   float aspect = uRes.x / uRes.y;
   vec3 dir = normalize(uCamFwd + uTanHalfFov * (ndc.x * aspect * uCamRight + ndc.y * uCamUp));
 
@@ -417,6 +455,8 @@ uniform vec2 uRes;
 uniform float uTime;
 uniform float uExposure;
 uniform float uBloomAmt;
+uniform vec2 uStreakDir;
+uniform float uStreakAmt;
 
 vec3 aces(vec3 x) {
   const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
@@ -440,7 +480,21 @@ void main() {
   scene.b = texture(uScene, vUv - c * ca).b;
 
   vec3 bloom = texture(uBloom, vUv).rgb;
-  vec3 col = scene + bloom * uBloomAmt;
+
+  // Long, low-energy bloom along the projected accretion-disk plane. Reusing
+  // the quarter-res bright texture keeps this inexpensive enough for wallpaper
+  // use while avoiding the synthetic look of a conventional lens-flare sprite.
+  vec3 streak = vec3(0.0);
+  if (uStreakAmt > 0.001) {
+    vec2 sd = normalize(uStreakDir + vec2(1e-6, 0.0)) / uRes;
+    streak += (texture(uBloom, vUv + sd * 10.0).rgb + texture(uBloom, vUv - sd * 10.0).rgb) * 0.24;
+    streak += (texture(uBloom, vUv + sd * 24.0).rgb + texture(uBloom, vUv - sd * 24.0).rgb) * 0.18;
+    streak += (texture(uBloom, vUv + sd * 46.0).rgb + texture(uBloom, vUv - sd * 46.0).rgb) * 0.12;
+    streak += (texture(uBloom, vUv + sd * 78.0).rgb + texture(uBloom, vUv - sd * 78.0).rgb) * 0.075;
+    streak += (texture(uBloom, vUv + sd * 118.0).rgb + texture(uBloom, vUv - sd * 118.0).rgb) * 0.04;
+  }
+
+  vec3 col = scene + bloom * uBloomAmt + streak * uStreakAmt * 0.36;
 
   col *= uExposure;
   col *= 1.0 - 0.42 * smoothstep(0.12, 0.62, r2);        // vignette

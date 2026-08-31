@@ -6,7 +6,11 @@ export interface RenderParams {
   up: [number, number, number]
   fwd: [number, number, number]
   tanHalfFov: number
+  /** off-axis projection shift in NDC; keeps the ray-traced scene physically coherent */
+  lensShift?: [number, number]
   time: number
+  /** real wall-clock animation seconds for deliberately slow transient events */
+  wallTime?: number
   diskGain: number
   starGain: number
   falseColor: number
@@ -22,6 +26,10 @@ export interface RenderParams {
   turb: number
   /** bloom strength (site default 0.85) */
   bloomAmt: number
+  /** screen-space direction of the projected disk plane */
+  streakDir?: [number, number]
+  /** restrained anamorphic extension of bright features */
+  streakAmt?: number
 }
 
 interface Target {
@@ -176,18 +184,19 @@ export class Renderer {
     const steps = this.tier === 2 ? 620 : this.tier === 1 ? 400 : 240
     const stepScale = this.tier === 2 ? 1.0 : this.tier === 1 ? 1.2 : 1.55
 
-    // ---- scene: general-relativistic ray trace into HDR target
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.scene.fbo)
     gl.viewport(0, 0, this.scene.w, this.scene.h)
     gl.useProgram(this.progScene)
     const s = this.progScene
     gl.uniform2f(this.loc(s, 'uRes'), this.scene.w, this.scene.h)
     gl.uniform1f(this.loc(s, 'uTime'), p.time)
+    gl.uniform1f(this.loc(s, 'uWallTime'), p.wallTime ?? p.time)
     gl.uniform3fv(this.loc(s, 'uCamPos'), p.camPos)
     gl.uniform3fv(this.loc(s, 'uCamRight'), p.right)
     gl.uniform3fv(this.loc(s, 'uCamUp'), p.up)
     gl.uniform3fv(this.loc(s, 'uCamFwd'), p.fwd)
     gl.uniform1f(this.loc(s, 'uTanHalfFov'), p.tanHalfFov)
+    gl.uniform2fv(this.loc(s, 'uLensShift'), p.lensShift ?? [0, 0])
     gl.uniform1f(this.loc(s, 'uDiskGain'), p.diskGain)
     gl.uniform1f(this.loc(s, 'uStarGain'), p.starGain)
     gl.uniform1f(this.loc(s, 'uFalseColor'), p.falseColor)
@@ -196,14 +205,12 @@ export class Renderer {
     gl.uniform3fv(this.loc(s, 'uCompanionDir'), p.companionDir)
     gl.uniform1i(this.loc(s, 'uSteps'), steps)
     gl.uniform1f(this.loc(s, 'uStepScale'), stepScale)
-    // angular size of one internal pixel — keeps star PSFs pixel-locked
     gl.uniform1f(this.loc(s, 'uPixAng'), (2 * p.tanHalfFov) / this.scene.h)
     gl.uniform1f(this.loc(s, 'uTempScale'), p.tempScale)
     gl.uniform1f(this.loc(s, 'uDiskOut'), p.diskOut)
     gl.uniform1f(this.loc(s, 'uTurb'), p.turb)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
-    // ---- bright pass into quarter-res bloomA
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.bloomA.fbo)
     gl.viewport(0, 0, this.bloomA.w, this.bloomA.h)
     gl.useProgram(this.progBright)
@@ -212,7 +219,6 @@ export class Renderer {
     gl.uniform1i(this.loc(this.progBright, 'uTex'), 0)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
-    // ---- two gaussian rounds, widening
     const blur = (src: Target, dst: Target, dx: number, dy: number) => {
       gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo)
       gl.viewport(0, 0, dst.w, dst.h)
@@ -227,7 +233,6 @@ export class Renderer {
     blur(this.bloomA, this.bloomB, 2.6, 0)
     blur(this.bloomB, this.bloomA, 0, 2.6)
 
-    // ---- composite to screen
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     gl.useProgram(this.progComp)
@@ -238,9 +243,11 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, this.bloomA.tex)
     gl.uniform1i(this.loc(this.progComp, 'uBloom'), 1)
     gl.uniform2f(this.loc(this.progComp, 'uRes'), this.canvas.width, this.canvas.height)
-    gl.uniform1f(this.loc(this.progComp, 'uTime'), p.time)
+    gl.uniform1f(this.loc(this.progComp, 'uTime'), p.wallTime ?? p.time)
     gl.uniform1f(this.loc(this.progComp, 'uExposure'), p.exposure)
     gl.uniform1f(this.loc(this.progComp, 'uBloomAmt'), p.bloomAmt)
+    gl.uniform2fv(this.loc(this.progComp, 'uStreakDir'), p.streakDir ?? [1, 0])
+    gl.uniform1f(this.loc(this.progComp, 'uStreakAmt'), p.streakAmt ?? 0)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
     gl.activeTexture(gl.TEXTURE0)
   }

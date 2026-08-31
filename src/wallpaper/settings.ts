@@ -5,26 +5,30 @@
  * Both paths funnel into the same patch callback.
  */
 
+export type Composition = 'cinematic' | 'horizon' | 'terminal' | 'centered' | 'void' | 'close'
+
 export interface WpSettings {
   /** camera preset: 0 signature · 1 edge-on · 2 ring · 3 face-on · 4 near · 5 silhouette · 6 wide · 7 knife-edge · 8 polar */
   view: number
+  /** off-axis optical framing, independent of the physical camera preset */
+  composition: Composition
   /** disk palette — a physical Planck temperature scale */
   palette: 'ember' | 'gold' | 'blue' | 'crimson'
   clock: 'off' | '24' | '12'
-  clockPos: 'bl' | 'bc' | 'br' | 'tl' | 'tr'
+  clockPos: 'auto' | 'bl' | 'bc' | 'br' | 'tl' | 'tr'
   clockSize: 's' | 'm' | 'l'
   /** clock typeface */
   font: 'mono' | 'display' | 'thin'
   /** the ":" separator: blinking, solid, or hidden (military 1432) */
   colon: 'blink' | 'on' | 'off'
-  /** corner border brackets */
+  /** optional legacy corner brackets */
   brackets: boolean
-  /** sweeping seconds bar */
+  /** orbital seconds scale */
   bar: boolean
   seconds: boolean
   /** date line detail */
   date: 'off' | 'date' | 'full'
-  accent: 'cyan' | 'ember' | 'mono'
+  accent: 'auto' | 'cyan' | 'ember' | 'mono'
   /** clock floats against the mouse */
   float: boolean
   /** 0..1 — star field richness */
@@ -49,23 +53,26 @@ export interface WpSettings {
   spin: number
   /** 0..1 → bloom strength 0 … 1.7 (0.5 = canonical 0.85) */
   glow: number
+  /** 0..1 → directional anamorphic bloom contribution */
+  streak: number
   /** 0..1 → exposure ×0.6 … ×1.4 (0.5 = neutral) */
   expo: number
 }
 
 export const DEFAULTS: WpSettings = {
   view: 0,
+  composition: 'cinematic',
   palette: 'ember',
   clock: '24',
-  clockPos: 'bl',
+  clockPos: 'auto',
   clockSize: 'm',
-  font: 'mono',
-  colon: 'blink',
-  brackets: true,
+  font: 'thin',
+  colon: 'on',
+  brackets: false,
   bar: true,
-  seconds: true,
+  seconds: false,
   date: 'date',
-  accent: 'cyan',
+  accent: 'auto',
   float: false,
   stars: 0.5,
   parallax: 0.5,
@@ -79,6 +86,7 @@ export const DEFAULTS: WpSettings = {
   turb: 0.65,
   spin: 0.45,
   glow: 0.5,
+  streak: 0.34,
   expo: 0.5,
 }
 
@@ -137,12 +145,14 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
         const v = Number(props.view.value)
         if (v >= 0 && v <= 8) patch.view = v
       }
+      if (props.composition?.value !== undefined)
+        patch.composition = pick(props.composition.value, ['cinematic', 'horizon', 'terminal', 'centered', 'void', 'close'] as const)
       if (props.palette?.value !== undefined)
         patch.palette = pick(props.palette.value, ['ember', 'gold', 'blue', 'crimson'] as const)
       if (props.clock?.value !== undefined)
         patch.clock = pick(props.clock.value, ['off', '24', '12'] as const)
       if (props.clockpos?.value !== undefined)
-        patch.clockPos = pick(props.clockpos.value, ['bl', 'bc', 'br', 'tl', 'tr'] as const)
+        patch.clockPos = pick(props.clockpos.value, ['auto', 'bl', 'bc', 'br', 'tl', 'tr'] as const)
       if (props.clocksize?.value !== undefined)
         patch.clockSize = pick(props.clocksize.value, ['s', 'm', 'l'] as const)
       if (props.clockfont?.value !== undefined)
@@ -162,7 +172,7 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
             : pick(d, ['off', 'date', 'full'] as const)
       }
       if (props.accent?.value !== undefined)
-        patch.accent = pick(props.accent.value, ['cyan', 'ember', 'mono'] as const)
+        patch.accent = pick(props.accent.value, ['auto', 'cyan', 'ember', 'mono'] as const)
       if (props.clockfloat?.value !== undefined) patch.float = !!props.clockfloat.value
       const sliders: [string, keyof WpSettings][] = [
         ['stars', 'stars'],
@@ -175,6 +185,7 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
         ['turbulence', 'turb'],
         ['spin', 'spin'],
         ['glow', 'glow'],
+        ['streak', 'streak'],
         ['exposure', 'expo'],
       ]
       for (const [prop, key] of sliders) {

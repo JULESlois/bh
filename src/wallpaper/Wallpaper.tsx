@@ -18,6 +18,23 @@ const PRESETS = [
   { dist: 26, incl: 13, fov: 44, expo: 1.1, disk: 1, star: 0.85 }, // 8 polar
 ]
 
+/**
+ * Wallpaper composition is deliberately separate from the physical camera.
+ * shift is an off-axis lens shift in NDC; dist is a framing multiplier.
+ * The auto clock anchor always occupies the negative-space side.
+ */
+const COMPOSITIONS: Record<
+  WpSettings['composition'],
+  { shift: [number, number]; dist: number; clock: Exclude<WpSettings['clockPos'], 'auto'> }
+> = {
+  cinematic: { shift: [0.34, 0.02], dist: 0.96, clock: 'bl' },
+  horizon: { shift: [-0.55, -0.31], dist: 0.82, clock: 'tr' },
+  terminal: { shift: [0.43, 0.25], dist: 1.02, clock: 'bl' },
+  centered: { shift: [0, 0], dist: 1, clock: 'bl' },
+  void: { shift: [0.48, 0.12], dist: 1.32, clock: 'bl' },
+  close: { shift: [0.29, -0.08], dist: 0.68, clock: 'tr' },
+}
+
 /** disk palettes: physical Planck temperature scales (hue only —
  *  the shader renormalizes luminance) */
 const PALETTES: Record<string, number> = {
@@ -26,6 +43,7 @@ const PALETTES: Record<string, number> = {
   gold: 1.18,
   blue: 1.8,
 }
+
 /** the companion star's azimuth: once per orbit the camera crosses it and
  *  the star slides exactly behind the hole — a periodic Einstein ring */
 const COMPANION_AZ = 2.4
@@ -59,7 +77,6 @@ function Seg(props: {
   )
 }
 
-/** two-line control group: label (+ live value) on top, control below */
 function Group(props: { label: string; value?: string; children: React.ReactNode }) {
   return (
     <div className="wctl">
@@ -81,7 +98,6 @@ export default function Wallpaper() {
   const secRef = useRef<HTMLElement>(null)
   const barRef = useRef<HTMLElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
-  const xRef = useRef<HTMLDivElement>(null)
   const clockRef = useRef<HTMLDivElement>(null)
   const rendererRef = useRef<Renderer | null>(null)
   const [s, setS] = useState<WpSettings>(load)
@@ -133,6 +149,7 @@ export default function Wallpaper() {
     const trailCanvas = trailRef.current!
     const tctx = trailCanvas.getContext('2d')!
     const tdpr = Math.min(window.devicePixelRatio || 1, 1.5)
+    const initialComp = COMPOSITIONS[sRef.current.composition]
 
     const st = {
       raf: 0,
@@ -143,13 +160,15 @@ export default function Wallpaper() {
       pty: 0,
       ptxT: 0,
       ptyT: 0,
-      // damped camera state, so preset switches glide
+      // damped camera/composition state, so all preset changes glide
       dist: PRESETS[sRef.current.view].dist,
       incl: PRESETS[sRef.current.view].incl,
       fov: PRESETS[sRef.current.view].fov,
       expo: PRESETS[sRef.current.view].expo,
       disk: PRESETS[sRef.current.view].disk,
       star: PRESETS[sRef.current.view].star,
+      shiftX: initialComp.shift[0],
+      shiftY: initialComp.shift[1],
       temp: PALETTES[sRef.current.palette] ?? 1,
       dout: 14 + 18 * sRef.current.diskSize,
       turbV: sRef.current.turb,
@@ -190,33 +209,38 @@ export default function Wallpaper() {
       // camera: drift + breathing + damped preset + parallax
       st.azim += (dt / 1000) * (0.006 + set.drift * 0.03)
       const P = PRESETS[set.view]
+      const C = COMPOSITIONS[set.composition]
+      const portrait = window.innerWidth < window.innerHeight
+      const compScale = portrait ? 0.68 : 1
       const k = 1 - Math.exp((-dt / 1000) * 2.2)
-      st.dist += (P.dist * (1.35 - 0.7 * set.zoom) - st.dist) * k
+      st.dist += (P.dist * C.dist * (1.35 - 0.7 * set.zoom) - st.dist) * k
       st.incl += (P.incl + (set.tilt - 0.5) * 20 - st.incl) * k
       st.fov += (P.fov - st.fov) * k
       st.expo += (P.expo * (0.6 + 0.8 * set.expo) - st.expo) * k
       st.disk += (P.disk * (0.4 + 1.2 * set.diskBright) - st.disk) * k
       st.star += (P.star - st.star) * k
+      st.shiftX += (C.shift[0] * compScale - st.shiftX) * k
+      st.shiftY += (C.shift[1] * compScale - st.shiftY) * k
       st.temp += ((PALETTES[set.palette] ?? 1) - st.temp) * k
       st.dout += (14 + 18 * set.diskSize - st.dout) * k
       st.turbV += (set.turb - st.turbV) * k
+
       // separate disk clock so spin changes never jump the phase
       st.diskClock += (dt / 1000) * TIME_SCALE * (set.spin * 2.2)
       const damp = 1 - Math.exp((-dt / 1000) * 3.2)
       st.ptx += (st.ptxT - st.ptx) * damp
       st.pty += (st.ptyT - st.pty) * damp
       const breath = Math.sin(st.clock * 0.18) * 0.5
-      // 89.8 cap keeps the knife-edge view a hair off the exact plane,
-      // where the thin-disk crossing test degenerates
       const incl = Math.min(
         Math.max(st.incl + breath + st.pty * 2.6 * set.parallax, 12),
         89.8,
       )
       const azim = st.azim + st.ptx * 0.07 * set.parallax
       const cam = cameraFrom(st.dist, incl, azim, st.fov)
-      // portrait fitting: never crop the hole on tall screens
+      // portrait fitting: never crop the hole solely because of aspect ratio
       let thf = cam.tanHalfFov
-      if (window.innerWidth < window.innerHeight) thf *= window.innerHeight / window.innerWidth
+      if (portrait) thf *= window.innerHeight / window.innerWidth
+
       // the companion sits opposite the camera's orbit at a fixed azimuth,
       // so every orbit it passes exactly behind — a recurring Einstein ring
       const comp = cameraFrom(1, incl, COMPANION_AZ, 55).pos
@@ -225,6 +249,21 @@ export default function Wallpaper() {
         return [-comp[0] / l, -comp[1] / l, -comp[2] / l]
       })()
 
+      // Project the disk normal (+Y) into screen space; its perpendicular is
+      // the direction of the visible disk plane and therefore of the streak.
+      const sx = cam.up[1]
+      const sy = -cam.right[1]
+      const sl = Math.hypot(sx, sy)
+      const streakDir: [number, number] = sl > 1e-4 ? [sx / sl, sy / sl] : [1, 0]
+
+      // When the companion reaches near-perfect alignment, exposure breathes
+      // by only a few percent. The event is felt rather than announced.
+      const align = Math.max(
+        0,
+        cam.fwd[0] * compDir[0] + cam.fwd[1] * compDir[1] + cam.fwd[2] * compDir[2],
+      )
+      const lensPulse = 0.028 * Math.pow(align, 1200)
+
       if (set.quality === 'auto') renderer.adapt(dt)
       renderer.render({
         camPos: cam.pos,
@@ -232,11 +271,13 @@ export default function Wallpaper() {
         up: cam.up,
         fwd: cam.fwd,
         tanHalfFov: thf,
+        lensShift: [st.shiftX, st.shiftY],
         time: st.diskClock,
+        wallTime: st.clock,
         diskGain: st.disk,
         starGain: (0.25 + 1.5 * set.stars) * st.star,
         falseColor: 0,
-        exposure: st.expo,
+        exposure: st.expo * (1 + lensPulse),
         markPhoton: 0,
         markIsco: 0,
         companionDir: compDir,
@@ -244,21 +285,22 @@ export default function Wallpaper() {
         diskOut: st.dout,
         turb: st.turbV,
         bloomAmt: 1.7 * set.glow,
+        streakDir,
+        streakAmt: set.quality === 'eco' ? 0 : set.streak,
       })
 
-      // clock — bar/colon/float every frame, text only when the second flips
+      // clock — colon/orbit marker/float every frame, text only on second flips
       if (set.clock !== 'off') {
         const d = new Date()
         const ms = d.getMilliseconds()
         const cs = d.getSeconds()
         if (colRef.current)
-          colRef.current.style.opacity =
-            set.colon === 'blink' && ms >= 500 ? '0.22' : '1'
+          colRef.current.style.opacity = set.colon === 'blink' && ms >= 500 ? '0.24' : '1'
         if (barRef.current)
-          barRef.current.style.width = `${(((cs + ms / 1000) / 60) * 100).toFixed(2)}%`
+          barRef.current.style.left = `${(((cs + ms / 1000) / 60) * 100).toFixed(2)}%`
         if (clockRef.current) {
-          const fx = set.float ? -st.ptx * 12 : 0
-          const fy = set.float ? -st.pty * 9 : 0
+          const fx = set.float ? -st.ptx * 9 : 0
+          const fy = set.float ? -st.pty * 7 : 0
           clockRef.current.style.setProperty('--mx', `${fx.toFixed(1)}px`)
           clockRef.current.style.setProperty('--my', `${fy.toFixed(1)}px`)
         }
@@ -267,7 +309,6 @@ export default function Wallpaper() {
           st.lastSec = cs
           st.lastClockKey = key
           const mm = String(d.getMinutes()).padStart(2, '0')
-          // colon "off" hides every separator, including before the seconds
           const sep = set.colon === 'off' ? ' ' : ':'
           const ss = set.seconds ? `${sep}${String(cs).padStart(2, '0')}` : ''
           const hr = d.getHours()
@@ -288,8 +329,6 @@ export default function Wallpaper() {
               `${DAYS[d.getDay()]} · ${MONTHS[d.getMonth()]} ${d.getDate()}` +
               (set.date === 'full' ? ` · DOY ${doy} · WK ${wk}` : '')
           }
-          if (xRef.current)
-            xRef.current.textContent = `UNIX ${Math.floor(d.getTime() / 1000)}`
         }
       }
 
@@ -323,10 +362,19 @@ export default function Wallpaper() {
   }, [])
 
   const pct = (x: number) => Math.round(x * 100)
-
   type SliderKey =
-    | 'stars' | 'drift' | 'parallax' | 'tilt' | 'zoom'
-    | 'diskBright' | 'diskSize' | 'turb' | 'spin' | 'glow' | 'expo'
+    | 'stars'
+    | 'drift'
+    | 'parallax'
+    | 'tilt'
+    | 'zoom'
+    | 'diskBright'
+    | 'diskSize'
+    | 'turb'
+    | 'spin'
+    | 'glow'
+    | 'streak'
+    | 'expo'
   const slider = (label: string, key: SliderKey, fmt?: (x: number) => string) => (
     <Group label={label} value={fmt ? fmt(s[key]) : `${pct(s[key])}%`}>
       <input
@@ -339,6 +387,11 @@ export default function Wallpaper() {
     </Group>
   )
 
+  const autoPos = COMPOSITIONS[s.composition].clock
+  const clockPos = s.clockPos === 'auto' ? autoPos : s.clockPos
+  const autoAccent = s.palette === 'blue' ? 'cyan' : 'ember'
+  const clockAccent = s.accent === 'auto' ? autoAccent : s.accent
+
   return (
     <>
       <canvas id="gl" ref={glRef} />
@@ -347,7 +400,7 @@ export default function Wallpaper() {
       {s.clock !== 'off' && (
         <div
           ref={clockRef}
-          className={`wp-clock p-${s.clockPos} sz-${s.clockSize} ac-${s.accent} f-${s.font}${s.brackets ? ' wc-br' : ''}`}
+          className={`wp-clock p-${clockPos} sz-${s.clockSize} ac-${clockAccent} f-${s.font}${s.brackets ? ' wc-br' : ''}`}
         >
           <div className="t">
             <span ref={hRef} />
@@ -360,12 +413,11 @@ export default function Wallpaper() {
             <i ref={secRef} />
           </div>
           {s.bar && (
-            <div className="sbar">
+            <div className="sbar" aria-hidden="true">
               <i ref={barRef} />
             </div>
           )}
           {s.date !== 'off' && <div className="d" ref={dateRef} />}
-          <div className="x" ref={xRef} />
         </div>
       )}
 
@@ -382,9 +434,24 @@ export default function Wallpaper() {
       />
 
       <aside className={`wp-panel${open ? ' open' : ''}`}>
-        <div className="ht">Settings</div>
+        <div className="ht">Schwarzschild</div>
 
-        <div className="wp-sec">scene</div>
+        <div className="wp-sec">composition</div>
+        <Group label="framing">
+          <Seg
+            grid
+            cur={s.composition}
+            opts={[
+              ['cinematic', 'cinematic'],
+              ['horizon', 'horizon'],
+              ['terminal', 'terminal'],
+              ['centered', 'center'],
+              ['void', 'void'],
+              ['close', 'close'],
+            ]}
+            on={(v) => setS({ ...s, composition: v as WpSettings['composition'] })}
+          />
+        </Group>
         <Group label="view">
           <Seg
             grid
@@ -428,7 +495,8 @@ export default function Wallpaper() {
 
         <div className="wp-sec">image</div>
         {slider('stars', 'stars')}
-        {slider('glow', 'glow')}
+        {slider('bloom', 'glow')}
+        {slider('streak', 'streak')}
         {slider('exposure', 'expo', (x) => `×${(0.6 + 0.8 * x).toFixed(2)}`)}
         <div className="wpair">
           <Group label="trail">
@@ -489,6 +557,7 @@ export default function Wallpaper() {
               <Seg
                 cur={s.clockPos}
                 opts={[
+                  ['auto', 'auto'],
                   ['tl', 'top·L'],
                   ['tr', 'top·R'],
                   ['bl', 'low·L'],
@@ -514,8 +583,9 @@ export default function Wallpaper() {
                 <Seg
                   cur={s.accent}
                   opts={[
+                    ['auto', 'auto'],
                     ['cyan', 'cyan'],
-                    ['ember', 'ember'],
+                    ['ember', 'warm'],
                     ['mono', 'mono'],
                   ]}
                   on={(v) => setS({ ...s, accent: v as WpSettings['accent'] })}
@@ -534,7 +604,7 @@ export default function Wallpaper() {
                   on={(v) => setS({ ...s, colon: v as WpSettings['colon'] })}
                 />
               </Group>
-              <Group label="border">
+              <Group label="brackets">
                 <Seg
                   cur={s.brackets ? 'on' : 'off'}
                   opts={[
@@ -546,7 +616,7 @@ export default function Wallpaper() {
               </Group>
             </div>
             <div className="wpair">
-              <Group label="sec bar">
+              <Group label="orbit scale">
                 <Seg
                   cur={s.bar ? 'on' : 'off'}
                   opts={[
