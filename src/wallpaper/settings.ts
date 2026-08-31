@@ -55,25 +55,28 @@ export const DEFAULTS: WpSettings = {
   date: 'date',
   accent: 'auto',
   float: false,
-  stars: 0.44,
+  stars: 0.42,
   parallax: 0.52,
   trail: false,
   drift: 0.46,
   quality: 'auto',
   tilt: 0.5,
   zoom: 0.5,
-  diskBright: 0.56,
+  diskBright: 0.60,
   diskSize: 0.78,
-  turb: 0.68,
+  turb: 0.70,
   spin: 0.45,
-  glow: 0.58,
-  streak: 0.62,
-  expo: 0.52,
+  glow: 0.62,
+  streak: 0.66,
+  expo: 0.50,
 }
 
 const KEY = 'schwarzschild-wallpaper'
 const VERSION_KEY = 'schwarzschild-wallpaper-version'
-const CURRENT_VERSION = 4
+const CURRENT_VERSION = 5
+
+const near = (v: unknown, target: number, epsilon = 0.015) =>
+  typeof v === 'number' && Math.abs(v - target) <= epsilon
 
 export function load(): WpSettings {
   try {
@@ -94,8 +97,6 @@ export function load(): WpSettings {
     delete p.clockStyle
 
     // v4 deliberately migrates the old fixed HUD to the new scene-aware clock.
-    // Scene tuning is preserved; only presentation defaults that otherwise hide
-    // the redesign are modernised once.
     if (version < 4) {
       p.clockAdaptive = true
       p.font = 'thin'
@@ -107,6 +108,17 @@ export function load(): WpSettings {
       p.composition = p.composition ?? 'cinematic'
       p.streak = Math.max(Number(p.streak ?? 0), 0.58)
       p.glow = Math.max(Number(p.glow ?? 0), 0.54)
+    }
+
+    // v5 retunes only values that still look like the previous shipped defaults.
+    // Deliberately customised scenes are left alone.
+    if (version < 5) {
+      if (p.diskBright === undefined || near(p.diskBright, 0.56)) p.diskBright = 0.60
+      if (p.turb === undefined || near(p.turb, 0.68)) p.turb = 0.70
+      if (p.glow === undefined || near(p.glow, 0.58)) p.glow = 0.62
+      if (p.streak === undefined || near(p.streak, 0.62)) p.streak = 0.66
+      if (p.expo === undefined || near(p.expo, 0.52)) p.expo = 0.50
+      if (p.stars === undefined || near(p.stars, 0.44)) p.stars = 0.42
     }
 
     return { ...DEFAULTS, ...p }
