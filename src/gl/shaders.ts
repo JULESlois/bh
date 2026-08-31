@@ -88,7 +88,7 @@ float vnoise(vec2 p) {
   float b = hash12(i + vec2(1.0, 0.0));
   float c = hash12(i + vec2(0.0, 1.0));
   float d = hash12(i + vec2(1.0, 1.0));
-  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  return mix(mix(a, b, f.x), mix(c, d, f.x), fy);
 }
 float fbm(vec2 p) {
   float v = 0.0, a = 0.5;
@@ -223,9 +223,17 @@ vec3 gRamp(float g) {
 }
 
 // ---------- disk shading ----------------------------------------------------
-// hp: hit point in the equatorial plane; rC: its radius; bAxis: conserved
-// impact parameter of this ray about the disk axis (traced-ray sign).
-vec3 diskShade(vec3 hp, float rC, float bAxis, out float alpha) {
+// grazing: 0 for an almost edge-on surface crossing, 1 for a steep crossing.
+// imageOrder rises for rays that have wound around the hole before they hit
+// the disk; those higher-order images are the natural source of the fine ring.
+vec3 diskShade(
+  vec3 hp,
+  float rC,
+  float bAxis,
+  float grazing,
+  float imageOrder,
+  out float alpha
+) {
   float phiAz = atan(hp.z, hp.x);
   float Om = pow(1.0 / rC, 1.5);                       // Keplerian Ω = √(M/r³)
   float g = sqrt(max(1.0 - 3.0 / rC, 0.0)) / (1.0 + Om * bAxis);
@@ -263,15 +271,33 @@ vec3 diskShade(vec3 hp, float rC, float bAxis, out float alpha) {
   hot *= exp(-dr * dr);
   Tem *= 1.0 + hot * envelope * 0.19;
 
-  Tem *= uTempScale;                                    // palette: hue shifts,
+  Tem *= uTempScale;                                    // palette: hue shifts
   float Tobs = g * Tem;                                 // Planck at g·T
-  float inten = pow(Tobs / (T_DISP * uTempScale), 4.0); // luminance renormalized
+  float inten = pow(Tobs / (T_DISP * uTempScale), 4.0); // bolometric g^4 lives here
+
+  // ACES later compresses the physical g^4 contrast heavily. Preserve a little
+  // more of that asymmetry before tone mapping without changing the geodesics.
+  float dop = clamp((g - 1.0) / 0.55, -1.0, 1.0);
+  float beamContrast = exp(dop * 0.30);
+  float edge = pow(1.0 - grazing, 2.1);
+  float limbGain = 1.0 + edge * 0.24;
+  float orderGain = 1.0 + imageOrder * 0.72;
+
   vec3 phys = blackbody(Tobs) * inten * 0.62 * max(uDiskGain, 1.0);
-  phys = mix(vec3(dot(phys, vec3(0.2126, 0.7152, 0.0722))), phys, 1.22);
+  phys *= beamContrast * limbGain * orderGain;
+  float lum = dot(phys, vec3(0.2126, 0.7152, 0.0722));
+  phys = mix(vec3(lum), phys, 1.18 + 0.24 * abs(dop));
 
   alpha = smoothstep(R_ISCO, R_ISCO + 0.8, rC) * (1.0 - smoothstep(uDiskOut - 6.5, uDiskOut, rC));
   alpha *= mix(1.0, 0.55 + 0.45 * smoothstep(0.15, 0.75, n1), clamp(uTurb, 0.0, 1.0));
   alpha = clamp(alpha, 0.0, 0.96) * clamp(uDiskGain, 0.0, 1.0);
+
+  // A grazing ray traverses a longer photospheric path. Higher-order images
+  // remain bright but slightly more transparent, so they form a fine ring
+  // instead of turning into a thick opaque band.
+  alpha = 1.0 - pow(1.0 - alpha, mix(1.0, 2.15, edge));
+  alpha *= mix(1.0, 0.76, imageOrder);
+  alpha = clamp(alpha, 0.0, 0.975);
 
   vec3 fc = gRamp(g) * (0.4 + 0.6 * smoothstep(0.1, 0.9, dens));
   return mix(phys, fc * 1.15, uFalseColor);
@@ -316,6 +342,8 @@ void main() {
   float uPrev = u;
   float wPrev = w;
   float phiPrev = 0.0;
+  float photonDwell = 0.0;
+  int diskCrossings = 0;
   bool escaped = false;
 
   for (int i = 0; i < 768; i++) {
@@ -341,6 +369,34 @@ void main() {
 
     float cphi = cos(phi), sphi = sin(phi);
     float Ynow = Yc * cphi + Ys * sphi;
+    float rNow = 1.0 / max(u, 1e-5);
+
+    // Accumulate how long this ray loiters near the photon sphere. This is not
+    // drawn as a synthetic circle; it only modulates the real lensed disk/sky
+    // contribution when the ray later escapes or intersects the disk.
+    float shell = exp(-pow((rNow - R_PHOTON) / 0.72, 2.0));
+    photonDwell += shell * h;
+
+    // A very thin, optically faint atmosphere gives the disk a photospheric
+    // thickness. It is skipped in the eco tier (uSteps=240), and the expensive
+    // work is only entered for rays already close to the equatorial plane.
+    if (uSteps > 300 && trans > 0.08 && abs(Ynow) < 0.042 && rNow >= R_ISCO && rNow <= uDiskOut + 1.2) {
+      float height = abs(Ynow) * rNow;
+      float H = 0.12 + 0.017 * rNow;
+      float vertical = exp(-pow(height / H, 2.0));
+      float inner = smoothstep(R_ISCO, R_ISCO + 1.2, rNow);
+      float outer = 1.0 - smoothstep(uDiskOut - 5.0, uDiskOut + 0.8, rNow);
+      float radial = inner * outer;
+      if (vertical * radial > 0.002) {
+        float azNow = atan(sphi * e2.z + cphi * e1.z, sphi * e2.x + cphi * e1.x);
+        float fil = 0.78 + 0.22 * vnoise(vec2(azNow * 8.0 - uTime * 0.015, rNow * 0.42));
+        float hotInner = 1.0 - smoothstep(R_ISCO, min(R_ISCO + 10.0, uDiskOut), rNow);
+        vec3 warm = mix(vec3(1.0, 0.36, 0.10), vec3(0.58, 0.78, 1.0), smoothstep(1.18, 1.72, uTempScale));
+        vec3 haze = mix(warm * 0.62, vec3(0.92, 0.92, 0.90), hotInner * 0.28);
+        float hazeGain = vertical * radial * fil * (0.010 + 0.018 * hotInner) * h * uDiskGain;
+        col += trans * haze * hazeGain;
+      }
+    }
 
     if (Ynow * Yprev < 0.0) {
       // equatorial plane crossing. Y(φ) is analytic, so Newton-polish the
@@ -383,9 +439,16 @@ void main() {
 
         if (rC >= R_ISCO && rC <= uDiskOut) {
           float alpha;
-          vec3 em = diskShade(hp, rC, bAxis, alpha);
+          float crossSlope = abs(-Yc * sin(phiC) + Ys * cos(phiC));
+          float grazing = smoothstep(0.025, 0.46, crossSlope);
+          float wound = smoothstep(1.02 * PI, 3.25 * PI, phiC);
+          float dwellOrder = smoothstep(0.38, 2.45, photonDwell);
+          float crossingOrder = min(float(diskCrossings), 2.0) * 0.27;
+          float imageOrder = clamp(max(wound, dwellOrder * 0.82) + crossingOrder, 0.0, 1.0);
+          vec3 em = diskShade(hp, rC, bAxis, grazing, imageOrder, alpha);
           col += trans * alpha * em;
           trans *= 1.0 - alpha;
+          diskCrossings++;
           if (trans < 0.02) break;
         }
       }
@@ -404,6 +467,10 @@ void main() {
     vec3 edir = normalize(-w * er + u * et);
     vec3 s = sky(edir);
     s *= mix(1.0, 0.12, uFalseColor);                     // sky recedes in false color
+    // Rays that spend a long time near r=3M form the narrow lensed background
+    // rim around the shadow. Keep this subtle: disk higher-order images should
+    // remain the brightest structure there.
+    s *= 1.0 + 0.16 * smoothstep(0.55, 2.7, photonDwell);
     col += trans * s;
   }
   // captured rays keep whatever the disk contributed; the remainder is
@@ -421,8 +488,10 @@ uniform sampler2D uTex;
 void main() {
   vec3 c = texture(uTex, vUv).rgb;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  float k = max(l - 0.72, 0.0);
-  k = k * k / (k + 0.6);
+  // Softer threshold catches the fine photon-ring / inner-disk highlights;
+  // a soft knee keeps ordinary stars from turning into huge blobs.
+  float k = max(l - 0.58, 0.0);
+  k = k * k / (k + 0.46);
   outColor = vec4(c * (k / max(l, 1e-4)), 1.0);
 }
 `
@@ -480,30 +549,54 @@ void main() {
   scene.b = texture(uScene, vUv - c * ca).b;
 
   vec3 bloom = texture(uBloom, vUv).rgb;
+  vec2 axis = normalize(uStreakDir + vec2(1e-6, 0.0));
+  vec2 sd = axis / uRes;
+  vec2 pd = vec2(-axis.y, axis.x) / uRes;
 
-  // Long, low-energy bloom along the projected accretion-disk plane. Reusing
-  // the quarter-res bright texture keeps this inexpensive enough for wallpaper
-  // use while avoiding the synthetic look of a conventional lens-flare sprite.
-  vec3 streak = vec3(0.0);
-  if (uStreakAmt > 0.001) {
-    vec2 sd = normalize(uStreakDir + vec2(1e-6, 0.0)) / uRes;
-    streak += (texture(uBloom, vUv + sd * 10.0).rgb + texture(uBloom, vUv - sd * 10.0).rgb) * 0.24;
-    streak += (texture(uBloom, vUv + sd * 24.0).rgb + texture(uBloom, vUv - sd * 24.0).rgb) * 0.18;
-    streak += (texture(uBloom, vUv + sd * 46.0).rgb + texture(uBloom, vUv - sd * 46.0).rgb) * 0.12;
-    streak += (texture(uBloom, vUv + sd * 78.0).rgb + texture(uBloom, vUv - sd * 78.0).rgb) * 0.075;
-    streak += (texture(uBloom, vUv + sd * 118.0).rgb + texture(uBloom, vUv - sd * 118.0).rgb) * 0.04;
+  // Tight full-resolution optical core. This preserves a crisp bright rim inside
+  // the much broader quarter-resolution bloom instead of turning everything
+  // luminous into one uniformly soft fog layer.
+  vec3 tight = vec3(0.0);
+  if (uBloomAmt > 0.001) {
+    tight += texture(uScene, vUv + sd * 1.35).rgb;
+    tight += texture(uScene, vUv - sd * 1.35).rgb;
+    tight += texture(uScene, vUv + pd * 1.35).rgb;
+    tight += texture(uScene, vUv - pd * 1.35).rgb;
+    tight *= 0.25;
+    float tl = dot(tight, vec3(0.2126, 0.7152, 0.0722));
+    tight *= smoothstep(0.58, 1.75, tl);
   }
 
-  vec3 col = scene + bloom * uBloomAmt + streak * uStreakAmt * 0.36;
+  // A transverse shoulder plus a long disk-aligned tail. Both reuse uBloom,
+  // so the added optical structure is cheap relative to the geodesic pass.
+  vec3 shoulder = vec3(0.0);
+  vec3 streak = vec3(0.0);
+  if (uStreakAmt > 0.001 || uBloomAmt > 0.001) {
+    shoulder += (texture(uBloom, vUv + pd * 5.0).rgb + texture(uBloom, vUv - pd * 5.0).rgb) * 0.30;
+    shoulder += (texture(uBloom, vUv + pd * 13.0).rgb + texture(uBloom, vUv - pd * 13.0).rgb) * 0.16;
+  }
+  if (uStreakAmt > 0.001) {
+    streak += (texture(uBloom, vUv + sd * 12.0).rgb + texture(uBloom, vUv - sd * 12.0).rgb) * 0.25;
+    streak += (texture(uBloom, vUv + sd * 30.0).rgb + texture(uBloom, vUv - sd * 30.0).rgb) * 0.18;
+    streak += (texture(uBloom, vUv + sd * 62.0).rgb + texture(uBloom, vUv - sd * 62.0).rgb) * 0.115;
+    streak += (texture(uBloom, vUv + sd * 112.0).rgb + texture(uBloom, vUv - sd * 112.0).rgb) * 0.065;
+    streak += (texture(uBloom, vUv + sd * 186.0).rgb + texture(uBloom, vUv - sd * 186.0).rgb) * 0.028;
+  }
+
+  vec3 col = scene;
+  col += tight * uBloomAmt * 0.115;
+  col += bloom * uBloomAmt * 0.76;
+  col += shoulder * uBloomAmt * 0.30;
+  col += streak * uStreakAmt * 0.46;
 
   col *= uExposure;
-  col *= 1.0 - 0.42 * smoothstep(0.12, 0.62, r2);        // vignette
+  col *= 1.0 - 0.40 * smoothstep(0.12, 0.64, r2);        // vignette
   col = aces(col);
   col = pow(col, vec3(1.0 / 2.2));
 
   // dithering grain kills banding in the deep sky
   float g = hash12(vUv * uRes + fract(uTime) * 61.7) - 0.5;
-  col += g * 0.012;
+  col += g * 0.010;
 
   outColor = vec4(col, 1.0);
 }
