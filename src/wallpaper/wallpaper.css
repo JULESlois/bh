@@ -1,4 +1,4 @@
-/* ————— wallpaper mode: adaptive observatory clock, trail, hidden settings ————— */
+/* ————— wallpaper mode: scene-composed clock, trail, hidden settings ————— */
 
 .wp-trail {
   position: fixed;
@@ -9,6 +9,11 @@
   pointer-events: none;
 }
 
+/*
+ * The clock is not a HUD card. Adaptive mode treats typography as a poster
+ * layer: JS positions it against the live black-hole silhouette and can mask
+ * a small part of the digits behind the shadow to create real depth hierarchy.
+ */
 .wp-clock {
   position: fixed;
   z-index: 5;
@@ -16,15 +21,17 @@
   --acc: var(--cyan);
   --mx: 0px;
   --my: 0px;
+  --clock-enter: 1;
+  --digit-gap: 0.34em;
   color: rgba(240, 241, 240, 0.94);
-  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.72), 0 0 30px rgba(0, 0, 0, 0.34);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.72), 0 0 30px rgba(0, 0, 0, 0.28);
   transform: translate(var(--mx), var(--my));
   min-width: 188px;
 }
 .wp-clock.ac-ember { --acc: var(--ember); }
 .wp-clock.ac-mono { --acc: rgba(232, 228, 220, 0.66); }
 
-/* Manual positions remain available, but adaptive is the default path. */
+/* Manual mode remains intentionally plain and predictable. */
 .wp-clock.p-bl { left: clamp(30px, 5vw, 88px); bottom: clamp(30px, 6vh, 82px); }
 .wp-clock.p-br { right: clamp(30px, 5vw, 88px); bottom: clamp(30px, 6vh, 82px); text-align: right; }
 .wp-clock.p-tl { left: clamp(30px, 5vw, 88px); top: clamp(30px, 6vh, 82px); }
@@ -36,29 +43,58 @@
   text-align: center;
 }
 
-/*
- * Adaptive layout is driven by the live lens shift, not by the name of a
- * preset. JS supplies a smoothly damped centre point, width and font size.
- */
 .wp-clock.adaptive {
   min-width: 0;
   width: var(--clock-width, 230px);
+  opacity: var(--clock-enter, 1);
   transform: translate(calc(-50% + var(--mx)), calc(-50% + var(--my)));
-  box-shadow: 0 0 58px 22px rgba(0, 0, 0, 0.085);
-  transition: text-shadow 0.3s, color 0.3s;
+  transition:
+    opacity 0.45s ease,
+    text-shadow 0.45s ease,
+    color 0.45s ease;
   will-change: left, top;
 }
 .wp-clock.adaptive[data-align='left'] { text-align: left; }
 .wp-clock.adaptive[data-align='right'] { text-align: right; }
 .wp-clock.adaptive[data-align='center'] { text-align: center; }
 
+.wp-clock .depth-time {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+.wp-clock[data-align='right'] .depth-time { margin-left: auto; }
+.wp-clock[data-align='center'] .depth-time { margin-left: auto; margin-right: auto; }
+
+/* Subject-over-type depth effect. Disabled by JS whenever overlap is excessive. */
+.wp-clock.adaptive[data-depth='on'] .depth-time {
+  -webkit-mask-image: radial-gradient(
+    circle at var(--depth-x) var(--depth-y),
+    transparent 0 var(--depth-in),
+    rgba(0, 0, 0, 0.32) var(--depth-mid),
+    #000 var(--depth-out)
+  );
+  mask-image: radial-gradient(
+    circle at var(--depth-x) var(--depth-y),
+    transparent 0 var(--depth-in),
+    rgba(0, 0, 0, 0.32) var(--depth-mid),
+    #000 var(--depth-out)
+  );
+}
+
 .wp-clock .t {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: var(--digit-gap);
   font: 420 clamp(42px, 5.15vw, 70px) / 0.94 var(--font-m);
   font-variant-numeric: tabular-nums slashed-zero;
   letter-spacing: 0.055em;
   color: rgba(240, 241, 240, 0.94);
   white-space: nowrap;
 }
+.wp-clock[data-align='right'] .t { justify-content: flex-end; }
+.wp-clock[data-align='center'] .t { justify-content: center; }
 .wp-clock.adaptive .t {
   font-size: var(--clock-auto-size, 62px);
   line-height: 0.93;
@@ -79,22 +115,16 @@
   letter-spacing: 0.082em;
 }
 
-.wp-clock .t .col {
-  display: inline-block;
-  color: var(--acc);
-  margin: 0 0.012em;
-  transform: translateY(-0.045em);
-  text-shadow: 0 0 11px var(--acc);
-  transition: opacity 0.12s;
-}
 .wp-clock .t i {
   font-style: normal;
-  font-size: 0.3em;
-  color: rgba(232, 228, 220, 0.43);
-  margin-left: 0.32em;
-  letter-spacing: 0.12em;
-  vertical-align: 0.13em;
+  font-size: 0.29em;
+  color: rgba(232, 228, 220, 0.46);
+  letter-spacing: 0.13em;
+  vertical-align: 0.14em;
+  white-space: pre;
 }
+.wp-clock .t i:empty { display: none; }
+
 .wp-clock .d {
   margin-top: 12px;
   font-size: 9.5px;
@@ -108,30 +138,7 @@
   font-size: clamp(8px, 1vmin, 12px);
 }
 
-/* Optional legacy corner brackets; intentionally not part of the default. */
-.wp-clock.wc-br { padding: 16px 20px 14px; }
-.wp-clock.wc-br::before,
-.wp-clock.wc-br::after {
-  content: '';
-  position: absolute;
-  width: 13px;
-  height: 13px;
-  opacity: 0.56;
-}
-.wp-clock.wc-br::before {
-  top: 0;
-  left: 0;
-  border-top: 1px solid var(--acc);
-  border-left: 1px solid var(--acc);
-}
-.wp-clock.wc-br::after {
-  bottom: 0;
-  right: 0;
-  border-bottom: 1px solid var(--acc);
-  border-right: 1px solid var(--acc);
-}
-
-/* Minute orbital scale: one locator, sparse ticks, no filled progress bar. */
+/* Minute scale doubles as the composition's typographic baseline. */
 .wp-clock .sbar {
   position: relative;
   margin-top: 14px;
@@ -169,7 +176,7 @@
 }
 .wp-clock .sbar i {
   position: absolute;
-  top: 0px;
+  top: 0;
   left: 0;
   width: 6px;
   height: 6px;
@@ -181,6 +188,72 @@
   opacity: 0.82;
   will-change: left;
 }
+
+/* Per-view poster grammar. No extra widgets: only hierarchy and spacing change. */
+.wp-clock.adaptive[data-art='poster'] { --digit-gap: 0.38em; }
+.wp-clock.adaptive[data-art='poster'] .d { letter-spacing: 0.38em; }
+
+.wp-clock.adaptive[data-art='horizon'] { --digit-gap: 0.44em; }
+.wp-clock.adaptive[data-art='horizon'] .t {
+  font-weight: 225;
+  font-stretch: 108%;
+  letter-spacing: 0.105em;
+}
+.wp-clock.adaptive[data-art='horizon'] .sbar { width: 100%; }
+
+.wp-clock.adaptive[data-art='eclipse'] { --digit-gap: 0.58em; }
+.wp-clock.adaptive[data-art='eclipse'] .t {
+  font-weight: 215;
+  letter-spacing: 0.11em;
+}
+.wp-clock.adaptive[data-art='eclipse'] .d {
+  margin-top: clamp(10px, 1.5vmin, 18px);
+  letter-spacing: 0.44em;
+}
+.wp-clock.adaptive[data-art='eclipse'] .sbar { width: 60%; }
+
+.wp-clock.adaptive[data-art='orbit'] { --digit-gap: 0.46em; }
+.wp-clock.adaptive[data-art='orbit'] .t {
+  font-weight: 230;
+  letter-spacing: 0.09em;
+}
+.wp-clock.adaptive[data-art='orbit'] .d { letter-spacing: 0.46em; }
+.wp-clock.adaptive[data-art='orbit'] .sbar { width: 54%; }
+
+.wp-clock.adaptive[data-art='crop'] { --digit-gap: 0.34em; }
+.wp-clock.adaptive[data-art='crop'] .t {
+  font-weight: 285;
+  letter-spacing: 0.045em;
+}
+.wp-clock.adaptive[data-art='crop'] .sbar { width: 72%; }
+
+.wp-clock.adaptive[data-art='quiet'],
+.wp-clock.adaptive[data-art='caption'] {
+  --digit-gap: 0.32em;
+  display: flex;
+  flex-direction: column;
+}
+.wp-clock.adaptive[data-art='quiet'] .t,
+.wp-clock.adaptive[data-art='caption'] .t {
+  font-weight: 225;
+  letter-spacing: 0.075em;
+}
+.wp-clock.adaptive[data-art='quiet'] .sbar { width: 58%; opacity: 0.62; }
+.wp-clock.adaptive[data-art='caption'] .d {
+  order: -1;
+  margin: 0 0 clamp(8px, 1.1vmin, 13px);
+  letter-spacing: 0.42em;
+  color: rgba(232, 228, 220, 0.54);
+}
+.wp-clock.adaptive[data-art='caption'] .sbar { width: 66%; opacity: 0.72; }
+
+.wp-clock.adaptive[data-art='blade'] { --digit-gap: 0.47em; }
+.wp-clock.adaptive[data-art='blade'] .t {
+  font-weight: 225;
+  font-stretch: 112%;
+  letter-spacing: 0.115em;
+}
+.wp-clock.adaptive[data-art='blade'] .sbar { width: 108%; }
 
 .wp-hot {
   position: fixed;
@@ -311,9 +384,10 @@
 @media (max-width: 680px) {
   .wp-clock:not(.adaptive) { min-width: 150px; }
   .wp-clock .d { letter-spacing: 0.26em; }
+  .wp-clock.adaptive[data-art='blade'] .sbar { width: 96%; }
   .wp-panel { right: 12px; width: min(304px, calc(100vw - 24px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wp-clock.adaptive { will-change: auto; }
+  .wp-clock.adaptive { will-change: auto; transition-duration: 0.01ms; }
 }
