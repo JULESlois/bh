@@ -371,11 +371,13 @@ void main() {
     float Ynow = Yc * cphi + Ys * sphi;
     float rNow = 1.0 / max(u, 1e-5);
 
-    // Accumulate how long this ray loiters near the photon sphere. This is not
-    // drawn as a synthetic circle; it only modulates the real lensed disk/sky
-    // contribution when the ray later escapes or intersects the disk.
-    float shell = exp(-pow((rNow - R_PHOTON) / 0.72, 2.0));
-    photonDwell += shell * h;
+    // Cheap dwell estimator: only rays inside a narrow photon-sphere window
+    // pay anything beyond abs/multiply, avoiding an exp() at every RK4 step.
+    float shellD = abs(rNow - R_PHOTON);
+    if (shellD < 1.15) {
+      float shell = 1.0 - shellD / 1.15;
+      photonDwell += shell * shell * h;
+    }
 
     // A very thin, optically faint atmosphere gives the disk a photospheric
     // thickness. It is skipped in the eco tier (uSteps=240), and the expensive
@@ -383,7 +385,8 @@ void main() {
     if (uSteps > 300 && trans > 0.08 && abs(Ynow) < 0.042 && rNow >= R_ISCO && rNow <= uDiskOut + 1.2) {
       float height = abs(Ynow) * rNow;
       float H = 0.12 + 0.017 * rNow;
-      float vertical = exp(-pow(height / H, 2.0));
+      float vz = clamp(1.0 - height / H, 0.0, 1.0);
+      float vertical = vz * vz * (3.0 - 2.0 * vz);
       float inner = smoothstep(R_ISCO, R_ISCO + 1.2, rNow);
       float outer = 1.0 - smoothstep(uDiskOut - 5.0, uDiskOut + 0.8, rNow);
       float radial = inner * outer;
