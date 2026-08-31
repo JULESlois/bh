@@ -1,7 +1,7 @@
 {
   "contentrating": "Everyone",
   "title": "SCHWARZSCHILD",
-  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Strong off-axis compositions, adaptive observatory clock, refined photon-ring detail, disk photosphere and structured directional bloom.",
+  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. View-directed optics, strong off-axis compositions, adaptive separatorless clock, refined photon-ring detail and disk photosphere.",
   "file": "wallpaper.html",
   "type": "web",
   "tags": ["Space", "Abstract"],
@@ -23,7 +23,7 @@
       },
       "view": {
         "order": 100,
-        "text": "View",
+        "text": "Directed view",
         "type": "combo",
         "value": "0",
         "options": [
@@ -103,7 +103,6 @@
         "type": "combo",
         "value": "bl",
         "options": [
-          { "label": "Scene side", "value": "auto" },
           { "label": "Top left", "value": "tl" },
           { "label": "Top right", "value": "tr" },
           { "label": "Bottom left", "value": "bl" },
@@ -123,22 +122,9 @@
         ]
       },
       "seconds": { "order": 125, "text": "Seconds", "type": "bool", "value": false },
-      "colonmode": {
-        "order": 126,
-        "text": "Colon",
-        "type": "combo",
-        "value": "on",
-        "options": [
-          { "label": "Blinking", "value": "blink" },
-          { "label": "Solid", "value": "on" },
-          { "label": "Hidden", "value": "off" }
-        ]
-      },
-      "brackets": { "order": 127, "text": "Border brackets", "type": "bool", "value": false },
-      "secondsbar": { "order": 128, "text": "Minute orbital scale", "type": "bool", "value": true },
-      "clockfloat": { "order": 129, "text": "Clock mouse float", "type": "bool", "value": false },
+      "secondsbar": { "order": 126, "text": "Minute scale", "type": "bool", "value": true },
       "showdate": {
-        "order": 130,
+        "order": 127,
         "text": "Date",
         "type": "combo",
         "value": "date",
@@ -149,7 +135,7 @@
         ]
       },
       "accent": {
-        "order": 131,
+        "order": 128,
         "text": "Accent",
         "type": "combo",
         "value": "auto",

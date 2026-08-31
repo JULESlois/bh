@@ -5,24 +5,22 @@
  */
 
 export type Composition = 'cinematic' | 'horizon' | 'terminal' | 'centered' | 'void' | 'close'
+export type ClockPos = 'bl' | 'bc' | 'br' | 'tl' | 'tr'
 
 export interface WpSettings {
   view: number
   composition: Composition
   palette: 'ember' | 'gold' | 'blue' | 'crimson'
   clock: 'off' | '24' | '12'
-  /** adaptive ignores the legacy/manual corner + size settings and reacts to the live composition */
+  /** adaptive ignores the manual corner + size settings and reacts to the live composition */
   clockAdaptive: boolean
-  clockPos: 'auto' | 'bl' | 'bc' | 'br' | 'tl' | 'tr'
+  clockPos: ClockPos
   clockSize: 's' | 'm' | 'l'
   font: 'mono' | 'display' | 'thin'
-  colon: 'blink' | 'on' | 'off'
-  brackets: boolean
   bar: boolean
   seconds: boolean
   date: 'off' | 'date' | 'full'
   accent: 'auto' | 'cyan' | 'ember' | 'mono'
-  float: boolean
   stars: number
   parallax: number
   trail: boolean
@@ -48,13 +46,10 @@ export const DEFAULTS: WpSettings = {
   clockPos: 'bl',
   clockSize: 'm',
   font: 'thin',
-  colon: 'on',
-  brackets: false,
   bar: true,
   seconds: false,
   date: 'date',
   accent: 'auto',
-  float: false,
   stars: 0.42,
   parallax: 0.52,
   trail: false,
@@ -73,35 +68,32 @@ export const DEFAULTS: WpSettings = {
 
 const KEY = 'schwarzschild-wallpaper'
 const VERSION_KEY = 'schwarzschild-wallpaper-version'
-const CURRENT_VERSION = 5
+const CURRENT_VERSION = 6
 
 const near = (v: unknown, target: number, epsilon = 0.015) =>
   typeof v === 'number' && Math.abs(v - target) <= epsilon
+
+type StoredSettings = Partial<Omit<WpSettings, 'clockPos' | 'date'>> & {
+  clockPos?: ClockPos | 'auto'
+  date?: boolean | WpSettings['date']
+  clockStyle?: 'hud' | 'minimal'
+  colon?: unknown
+  brackets?: unknown
+  float?: unknown
+}
 
 export function load(): WpSettings {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return { ...DEFAULTS }
     const version = Number(localStorage.getItem(VERSION_KEY) || 0)
-    const p = JSON.parse(raw) as Partial<WpSettings> & {
-      clockStyle?: 'hud' | 'minimal'
-      date?: boolean | WpSettings['date']
-    }
+    const p = JSON.parse(raw) as StoredSettings
 
     if (typeof p.date === 'boolean') p.date = p.date ? 'date' : 'off'
-    if (p.clockStyle === 'minimal') {
-      p.brackets = p.brackets ?? false
-      p.bar = p.bar ?? false
-      p.colon = p.colon ?? 'on'
-    }
-    delete p.clockStyle
+    if (p.clockPos === 'auto') p.clockPos = 'bl'
 
-    // v4 deliberately migrates the old fixed HUD to the new scene-aware clock.
     if (version < 4) {
       p.clockAdaptive = true
-      p.font = 'thin'
-      p.colon = 'on'
-      p.brackets = false
       p.bar = true
       p.seconds = false
       p.accent = 'auto'
@@ -110,8 +102,6 @@ export function load(): WpSettings {
       p.glow = Math.max(Number(p.glow ?? 0), 0.54)
     }
 
-    // v5 retunes only values that still look like the previous shipped defaults.
-    // Deliberately customised scenes are left alone.
     if (version < 5) {
       if (p.diskBright === undefined || near(p.diskBright, 0.56)) p.diskBright = 0.60
       if (p.turb === undefined || near(p.turb, 0.68)) p.turb = 0.70
@@ -121,7 +111,14 @@ export function load(): WpSettings {
       if (p.stars === undefined || near(p.stars, 0.44)) p.stars = 0.42
     }
 
-    return { ...DEFAULTS, ...p }
+    // v6 removes the old HUD-era clock controls. The clock now always uses
+    // whitespace between digit groups; brackets and mouse-float are gone.
+    delete p.clockStyle
+    delete p.colon
+    delete p.brackets
+    delete p.float
+
+    return { ...DEFAULTS, ...p } as WpSettings
   } catch {
     return { ...DEFAULTS }
   }
@@ -151,6 +148,7 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
       applyUserProperties?: (props: Record<string, WeProp>) => void
     }
   }
+
   w.wallpaperPropertyListener = {
     applyUserProperties(props) {
       const patch: Partial<WpSettings> = {}
@@ -166,14 +164,11 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
         patch.clock = pick(props.clock.value, ['off', '24', '12'] as const)
       if (props.clockadaptive?.value !== undefined) patch.clockAdaptive = !!props.clockadaptive.value
       if (props.clockpos?.value !== undefined)
-        patch.clockPos = pick(props.clockpos.value, ['auto', 'bl', 'bc', 'br', 'tl', 'tr'] as const)
+        patch.clockPos = pick(props.clockpos.value, ['bl', 'bc', 'br', 'tl', 'tr'] as const)
       if (props.clocksize?.value !== undefined)
         patch.clockSize = pick(props.clocksize.value, ['s', 'm', 'l'] as const)
       if (props.clockfont?.value !== undefined)
         patch.font = pick(props.clockfont.value, ['mono', 'display', 'thin'] as const)
-      if (props.colonmode?.value !== undefined)
-        patch.colon = pick(props.colonmode.value, ['blink', 'on', 'off'] as const)
-      if (props.brackets?.value !== undefined) patch.brackets = !!props.brackets.value
       if (props.secondsbar?.value !== undefined) patch.bar = !!props.secondsbar.value
       if (props.seconds?.value !== undefined) patch.seconds = !!props.seconds.value
       if (props.showdate?.value !== undefined) {
@@ -182,7 +177,6 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
       }
       if (props.accent?.value !== undefined)
         patch.accent = pick(props.accent.value, ['auto', 'cyan', 'ember', 'mono'] as const)
-      if (props.clockfloat?.value !== undefined) patch.float = !!props.clockfloat.value
 
       const sliders: [string, keyof WpSettings][] = [
         ['stars', 'stars'],
@@ -212,6 +206,7 @@ export function bindWallpaperEngine(apply: (patch: Partial<WpSettings>) => void)
       if (Object.keys(patch).length) apply(patch)
     },
   }
+
   return () => {
     delete w.wallpaperPropertyListener
   }
