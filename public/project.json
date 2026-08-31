@@ -1,13 +1,10 @@
 {
   "contentrating": "Everyone",
   "title": "SCHWARZSCHILD",
-  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Off-axis composition presets, observatory clock, mouse parallax, subtle transient disk events and directional bloom.",
+  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Strong off-axis compositions, adaptive observatory clock, mouse parallax, transient disk events and directional bloom.",
   "file": "wallpaper.html",
   "type": "web",
-  "tags": [
-    "Space",
-    "Abstract"
-  ],
+  "tags": ["Space", "Abstract"],
   "general": {
     "properties": {
       "composition": {
@@ -55,16 +52,16 @@
           { "label": "Blue (9 000 K)", "value": "blue" }
         ]
       },
-      "diskbright": { "order": 104, "text": "Disk brightness", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "diskbright": { "order": 104, "text": "Disk brightness", "type": "slider", "value": 56, "min": 0, "max": 100 },
       "disksize": { "order": 105, "text": "Disk outer radius", "type": "slider", "value": 78, "min": 0, "max": 100 },
-      "turbulence": { "order": 106, "text": "Disk turbulence", "type": "slider", "value": 65, "min": 0, "max": 100 },
+      "turbulence": { "order": 106, "text": "Disk turbulence", "type": "slider", "value": 68, "min": 0, "max": 100 },
       "spin": { "order": 107, "text": "Disk rotation", "type": "slider", "value": 45, "min": 0, "max": 100 },
-      "stars": { "order": 108, "text": "Star field", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "glow": { "order": 109, "text": "Bloom", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "streak": { "order": 110, "text": "Directional streak", "type": "slider", "value": 34, "min": 0, "max": 100 },
-      "exposure": { "order": 111, "text": "Exposure", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "drift": { "order": 112, "text": "Orbit drift", "type": "slider", "value": 45, "min": 0, "max": 100 },
-      "parallax": { "order": 113, "text": "Mouse parallax", "type": "slider", "value": 50, "min": 0, "max": 100 },
+      "stars": { "order": 108, "text": "Star field", "type": "slider", "value": 44, "min": 0, "max": 100 },
+      "glow": { "order": 109, "text": "Bloom", "type": "slider", "value": 58, "min": 0, "max": 100 },
+      "streak": { "order": 110, "text": "Directional streak", "type": "slider", "value": 62, "min": 0, "max": 100 },
+      "exposure": { "order": 111, "text": "Exposure", "type": "slider", "value": 52, "min": 0, "max": 100 },
+      "drift": { "order": 112, "text": "Orbit drift", "type": "slider", "value": 46, "min": 0, "max": 100 },
+      "parallax": { "order": 113, "text": "Mouse parallax", "type": "slider", "value": 52, "min": 0, "max": 100 },
       "trail": { "order": 114, "text": "Mouse trail", "type": "bool", "value": false },
       "quality": {
         "order": 115,
@@ -88,8 +85,9 @@
           { "label": "12-hour", "value": "12" }
         ]
       },
+      "clockadaptive": { "order": 121, "text": "Adaptive clock layout", "type": "bool", "value": true },
       "clockfont": {
-        "order": 121,
+        "order": 122,
         "text": "Clock font",
         "type": "combo",
         "value": "thin",
@@ -100,12 +98,12 @@
         ]
       },
       "clockpos": {
-        "order": 122,
-        "text": "Clock position",
+        "order": 123,
+        "text": "Manual clock position",
         "type": "combo",
-        "value": "auto",
+        "value": "bl",
         "options": [
-          { "label": "Auto (composition)", "value": "auto" },
+          { "label": "Scene side", "value": "auto" },
           { "label": "Top left", "value": "tl" },
           { "label": "Top right", "value": "tr" },
           { "label": "Bottom left", "value": "bl" },
@@ -114,8 +112,8 @@
         ]
       },
       "clocksize": {
-        "order": 123,
-        "text": "Clock size",
+        "order": 124,
+        "text": "Manual clock size",
         "type": "combo",
         "value": "m",
         "options": [
@@ -124,9 +122,9 @@
           { "label": "Large", "value": "l" }
         ]
       },
-      "seconds": { "order": 124, "text": "Seconds", "type": "bool", "value": false },
+      "seconds": { "order": 125, "text": "Seconds", "type": "bool", "value": false },
       "colonmode": {
-        "order": 125,
+        "order": 126,
         "text": "Colon",
         "type": "combo",
         "value": "on",
@@ -136,11 +134,11 @@
           { "label": "Hidden", "value": "off" }
         ]
       },
-      "brackets": { "order": 126, "text": "Border brackets", "type": "bool", "value": false },
-      "secondsbar": { "order": 127, "text": "Minute orbital scale", "type": "bool", "value": true },
-      "clockfloat": { "order": 128, "text": "Clock mouse float", "type": "bool", "value": false },
+      "brackets": { "order": 127, "text": "Border brackets", "type": "bool", "value": false },
+      "secondsbar": { "order": 128, "text": "Minute orbital scale", "type": "bool", "value": true },
+      "clockfloat": { "order": 129, "text": "Clock mouse float", "type": "bool", "value": false },
       "showdate": {
-        "order": 129,
+        "order": 130,
         "text": "Date",
         "type": "combo",
         "value": "date",
@@ -151,7 +149,7 @@
         ]
       },
       "accent": {
-        "order": 130,
+        "order": 131,
         "text": "Accent",
         "type": "combo",
         "value": "auto",
