@@ -1,4 +1,4 @@
-/* ————— wallpaper mode: observatory clock, trail, hidden settings ————— */
+/* ————— wallpaper mode: adaptive observatory clock, trail, hidden settings ————— */
 
 .wp-trail {
   position: fixed;
@@ -9,26 +9,22 @@
   pointer-events: none;
 }
 
-/*
- * Clock V2: intentionally closer to observatory/instrument typography than
- * a generic game HUD. The time stays nearly white; accent is reserved for
- * the separator and the minute-orbit marker.
- */
 .wp-clock {
   position: fixed;
   z-index: 5;
   pointer-events: auto;
-  text-shadow: 0 1px 22px rgba(0, 0, 0, 0.72);
   --acc: var(--cyan);
   --mx: 0px;
   --my: 0px;
+  color: rgba(240, 241, 240, 0.94);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.72), 0 0 30px rgba(0, 0, 0, 0.34);
   transform: translate(var(--mx), var(--my));
   min-width: 188px;
 }
 .wp-clock.ac-ember { --acc: var(--ember); }
-.wp-clock.ac-mono { --acc: rgba(232, 228, 220, 0.64); }
+.wp-clock.ac-mono { --acc: rgba(232, 228, 220, 0.66); }
 
-/* positions — deliberately inset from the display edge like an instrument overlay */
+/* Manual positions remain available, but adaptive is the default path. */
 .wp-clock.p-bl { left: clamp(30px, 5vw, 88px); bottom: clamp(30px, 6vh, 82px); }
 .wp-clock.p-br { right: clamp(30px, 5vw, 88px); bottom: clamp(30px, 6vh, 82px); text-align: right; }
 .wp-clock.p-tl { left: clamp(30px, 5vw, 88px); top: clamp(30px, 6vh, 82px); }
@@ -40,17 +36,36 @@
   text-align: center;
 }
 
+/*
+ * Adaptive layout is driven by the live lens shift, not by the name of a
+ * preset. JS supplies a smoothly damped centre point, width and font size.
+ */
+.wp-clock.adaptive {
+  min-width: 0;
+  width: var(--clock-width, 230px);
+  transform: translate(calc(-50% + var(--mx)), calc(-50% + var(--my)));
+  box-shadow: 0 0 58px 22px rgba(0, 0, 0, 0.085);
+  transition: text-shadow 0.3s, color 0.3s;
+  will-change: left, top;
+}
+.wp-clock.adaptive[data-align='left'] { text-align: left; }
+.wp-clock.adaptive[data-align='right'] { text-align: right; }
+.wp-clock.adaptive[data-align='center'] { text-align: center; }
+
 .wp-clock .t {
-  font: 420 clamp(42px, 5.15vw, 70px) / 0.95 var(--font-m);
+  font: 420 clamp(42px, 5.15vw, 70px) / 0.94 var(--font-m);
   font-variant-numeric: tabular-nums slashed-zero;
   letter-spacing: 0.055em;
-  color: rgba(238, 239, 238, 0.9);
+  color: rgba(240, 241, 240, 0.94);
   white-space: nowrap;
+}
+.wp-clock.adaptive .t {
+  font-size: var(--clock-auto-size, 62px);
+  line-height: 0.93;
 }
 .wp-clock.sz-s .t { font-size: clamp(28px, 3.15vw, 41px); }
 .wp-clock.sz-l .t { font-size: clamp(56px, 7.6vw, 108px); }
 
-/* typefaces */
 .wp-clock.f-display .t {
   font-family: var(--font-d);
   font-weight: 760;
@@ -59,39 +74,42 @@
 }
 .wp-clock.f-thin .t {
   font-family: var(--font-d);
-  font-weight: 260;
+  font-weight: 245;
   font-stretch: 104%;
-  letter-spacing: 0.075em;
+  letter-spacing: 0.082em;
 }
 
 .wp-clock .t .col {
   display: inline-block;
   color: var(--acc);
-  margin: 0 0.015em;
+  margin: 0 0.012em;
   transform: translateY(-0.045em);
+  text-shadow: 0 0 11px var(--acc);
   transition: opacity 0.12s;
 }
 .wp-clock .t i {
   font-style: normal;
-  font-size: 0.31em;
+  font-size: 0.3em;
   color: rgba(232, 228, 220, 0.43);
   margin-left: 0.32em;
   letter-spacing: 0.12em;
-  vertical-align: 0.12em;
+  vertical-align: 0.13em;
 }
 .wp-clock .d {
   margin-top: 12px;
   font-size: 9.5px;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: rgba(232, 228, 220, 0.46);
+  color: rgba(232, 228, 220, 0.48);
   white-space: nowrap;
 }
-
-/* optional legacy corner brackets; no longer part of the default look */
-.wp-clock.wc-br {
-  padding: 16px 20px 14px;
+.wp-clock.adaptive .d {
+  margin-top: clamp(8px, 1.2vmin, 14px);
+  font-size: clamp(8px, 1vmin, 12px);
 }
+
+/* Optional legacy corner brackets; intentionally not part of the default. */
+.wp-clock.wc-br { padding: 16px 20px 14px; }
 .wp-clock.wc-br::before,
 .wp-clock.wc-br::after {
   content: '';
@@ -113,19 +131,22 @@
   border-right: 1px solid var(--acc);
 }
 
-/*
- * Minute orbital scale. Unlike a filled progress bar, a single luminous
- * locator travels along a dim baseline with sparse instrument ticks.
- */
+/* Minute orbital scale: one locator, sparse ticks, no filled progress bar. */
 .wp-clock .sbar {
   position: relative;
   margin-top: 14px;
   width: min(100%, 238px);
   height: 7px;
 }
+.wp-clock.adaptive .sbar {
+  width: 82%;
+  margin-top: clamp(10px, 1.4vmin, 16px);
+}
 .wp-clock.p-br .sbar,
-.wp-clock.p-tr .sbar { margin-left: auto; }
-.wp-clock.p-bc .sbar { margin-left: auto; margin-right: auto; }
+.wp-clock.p-tr .sbar,
+.wp-clock.adaptive[data-align='right'] .sbar { margin-left: auto; }
+.wp-clock.p-bc .sbar,
+.wp-clock.adaptive[data-align='center'] .sbar { margin-left: auto; margin-right: auto; }
 .wp-clock .sbar::before {
   content: '';
   position: absolute;
@@ -135,33 +156,32 @@
   height: 1px;
   background:
     linear-gradient(90deg,
-      rgba(232,228,220,.28) 0 1px,
+      rgba(232,228,220,.30) 0 1px,
       transparent 1px calc(25% - .5px),
-      rgba(232,228,220,.16) calc(25% - .5px) calc(25% + .5px),
+      rgba(232,228,220,.15) calc(25% - .5px) calc(25% + .5px),
       transparent calc(25% + .5px) calc(50% - .5px),
-      rgba(232,228,220,.22) calc(50% - .5px) calc(50% + .5px),
+      rgba(232,228,220,.24) calc(50% - .5px) calc(50% + .5px),
       transparent calc(50% + .5px) calc(75% - .5px),
-      rgba(232,228,220,.16) calc(75% - .5px) calc(75% + .5px),
+      rgba(232,228,220,.15) calc(75% - .5px) calc(75% + .5px),
       transparent calc(75% + .5px) calc(100% - 1px),
-      rgba(232,228,220,.28) calc(100% - 1px) 100%);
-  box-shadow: inset 0 0 0 999px rgba(232, 228, 220, 0.055);
+      rgba(232,228,220,.30) calc(100% - 1px) 100%);
+  box-shadow: inset 0 0 0 999px rgba(232, 228, 220, 0.052);
 }
 .wp-clock .sbar i {
   position: absolute;
-  top: 1px;
+  top: 0px;
   left: 0;
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   margin: 0;
   border-radius: 50%;
   background: var(--acc);
   transform: translateX(-50%);
-  box-shadow: 0 0 8px var(--acc);
-  opacity: 0.72;
+  box-shadow: 0 0 8px var(--acc), 0 0 17px var(--acc);
+  opacity: 0.82;
   will-change: left;
 }
 
-/* hidden hotspot: invisible until hovered, then a corner bracket */
 .wp-hot {
   position: fixed;
   top: 0;
@@ -184,10 +204,7 @@
   border-right: 1px solid var(--cyan);
 }
 .wp-hot:hover,
-.wp-hot:focus-visible {
-  opacity: 1;
-  outline: none;
-}
+.wp-hot:focus-visible { opacity: 1; outline: none; }
 
 .wp-panel {
   position: fixed;
@@ -206,20 +223,9 @@
   background: rgba(4, 4, 4, 0.84);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
-  clip-path: polygon(
-    0 0,
-    calc(100% - 16px) 0,
-    100% 16px,
-    100% 100%,
-    16px 100%,
-    0 calc(100% - 16px)
-  );
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
 }
-.wp-panel.open {
-  transform: translate(0, -50%);
-  opacity: 1;
-  pointer-events: auto;
-}
+.wp-panel.open { transform: translate(0, -50%); opacity: 1; pointer-events: auto; }
 .wp-panel::before,
 .wp-panel::after {
   content: '';
@@ -228,18 +234,8 @@
   height: 14px;
   pointer-events: none;
 }
-.wp-panel::before {
-  top: 0;
-  left: 0;
-  border-top: 1px solid var(--cyan);
-  border-left: 1px solid var(--cyan);
-}
-.wp-panel::after {
-  bottom: 0;
-  right: 0;
-  border-bottom: 1px solid var(--cyan);
-  border-right: 1px solid var(--cyan);
-}
+.wp-panel::before { top: 0; left: 0; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
+.wp-panel::after { bottom: 0; right: 0; border-bottom: 1px solid var(--cyan); border-right: 1px solid var(--cyan); }
 .wp-panel .ht {
   font-family: var(--font-d);
   font-weight: 760;
@@ -260,11 +256,7 @@
   color: rgba(232, 228, 220, 0.4);
 }
 .wp-panel::-webkit-scrollbar { display: none; }
-
-.wp-panel .wctl {
-  margin: 8px 0;
-  min-width: 0;
-}
+.wp-panel .wctl { margin: 8px 0; min-width: 0; }
 .wp-panel .wlab {
   display: flex;
   justify-content: space-between;
@@ -281,20 +273,9 @@
   letter-spacing: 0.1em;
   color: var(--cyan);
 }
-.wp-panel .wpair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 14px;
-}
-.wp-panel .wopts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.wp-panel .wopts.wgrid3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
+.wp-panel .wpair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.wp-panel .wopts { display: flex; flex-wrap: wrap; gap: 4px; }
+.wp-panel .wopts.wgrid3 { display: grid; grid-template-columns: repeat(3, 1fr); }
 .wp-panel .opt {
   font-size: 9.5px;
   letter-spacing: 0.05em;
@@ -306,19 +287,9 @@
   white-space: nowrap;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.wp-panel .opt:hover {
-  color: var(--ink);
-  border-color: rgba(232, 228, 220, 0.32);
-}
-.wp-panel .opt.on {
-  color: var(--cyan);
-  border-color: var(--cyan-dim);
-  background: rgba(111, 213, 206, 0.08);
-}
-.wp-panel .opt:focus-visible {
-  outline: 1px solid var(--cyan);
-  outline-offset: 2px;
-}
+.wp-panel .opt:hover { color: var(--ink); border-color: rgba(232, 228, 220, 0.32); }
+.wp-panel .opt.on { color: var(--cyan); border-color: var(--cyan-dim); background: rgba(111, 213, 206, 0.08); }
+.wp-panel .opt:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .wp-panel input[type='range'] {
   width: 100%;
   height: 16px;
@@ -338,11 +309,11 @@
 .wp-reset:hover { color: var(--ember); }
 
 @media (max-width: 680px) {
-  .wp-clock { min-width: 150px; }
+  .wp-clock:not(.adaptive) { min-width: 150px; }
   .wp-clock .d { letter-spacing: 0.26em; }
-  .wp-clock .sbar { width: min(100%, 190px); }
-  .wp-panel {
-    right: 12px;
-    width: min(304px, calc(100vw - 24px));
-  }
+  .wp-panel { right: 12px; width: min(304px, calc(100vw - 24px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wp-clock.adaptive { will-change: auto; }
 }
