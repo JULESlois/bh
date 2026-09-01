@@ -4,9 +4,15 @@ import {
   COMPOSITIONS,
   SCENE_PRESETS,
   SCENE_PRESET_ORDER,
+  curatedPresetFromLegacy,
+  isCustomView,
+  isScenePresetId,
   presetFromLegacy,
+  viewFromLegacyPreset,
+  viewIdFromIndex,
   type ClockArtName,
   type CompositionId,
+  type CustomViewId,
   type ScenePresetId,
 } from './presets'
 
@@ -16,12 +22,11 @@ export type CustomClockArt = 'auto' | ClockArtName
 
 export interface CustomScene {
   basePreset: ScenePresetId
-  /** 0..1, mapped to a 0.72..1.28 multiplier around the preset framing */
+  /** Preset inherits the base scene's canonical view; all other values override it. */
+  view: CustomViewId
   framing: number
-  /** 0..1, centred at 0.5 and mapped to additive NDC offsets */
   shiftX: number
   shiftY: number
-  /** 0..1, centred at 0.5 and mapped to ±15° */
   roll: number
   tilt: number
   zoom: number
@@ -36,7 +41,6 @@ export interface CustomScene {
   drift: number
   parallax: number
   clockArt: CustomClockArt
-  /** 0..1; 0.5 leaves the preset's clock art unchanged */
   clockScale: number
   clockNear: number
   clockDepth: number
@@ -63,6 +67,7 @@ export interface WpSettings {
 
 export const CUSTOM_SCENE_DEFAULTS: CustomScene = {
   basePreset: 'signature',
+  view: 'preset',
   framing: 0.5,
   shiftX: 0.5,
   shiftY: 0.5,
@@ -105,7 +110,7 @@ export const DEFAULTS: WpSettings = {
 
 const KEY = 'schwarzschild-wallpaper'
 const VERSION_KEY = 'schwarzschild-wallpaper-version'
-const CURRENT_VERSION = 7
+const CURRENT_VERSION = 8
 const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1)
 const num = (v: unknown, fallback: number) => Number.isFinite(Number(v)) ? clamp01(Number(v)) : fallback
 const near = (a: unknown, b: number, epsilon = 0.015) => typeof a === 'number' && Math.abs(a - b) <= epsilon
@@ -132,8 +137,9 @@ const LEGACY_SCENE_DEFAULTS = {
   parallax: 0.52,
 } as const
 
-type LegacyStored = Omit<Partial<WpSettings>, 'clockPos' | 'date' | 'custom'> & {
-  custom?: Partial<CustomScene>
+type LegacyStored = Omit<Partial<WpSettings>, 'clockPos' | 'date' | 'custom' | 'scenePreset'> & {
+  scenePreset?: ScenePresetId | string
+  custom?: Partial<CustomScene> & { basePreset?: ScenePresetId | string; view?: CustomViewId | string }
   view?: number
   composition?: CompositionId
   tilt?: number
@@ -156,12 +162,15 @@ type LegacyStored = Omit<Partial<WpSettings>, 'clockPos' | 'date' | 'custom'> & 
   float?: unknown
 }
 
-function normalizeCustom(raw: Partial<CustomScene> | undefined): CustomScene {
+function normalizeCustom(raw: LegacyStored['custom']): CustomScene {
   const p = raw ?? {}
+  const oldBase = p.basePreset
+  const basePreset = isScenePresetId(oldBase) ? curatedPresetFromLegacy(oldBase) : CUSTOM_SCENE_DEFAULTS.basePreset
   return {
     ...CUSTOM_SCENE_DEFAULTS,
     ...p,
-    basePreset: isPreset(p.basePreset) ? p.basePreset : CUSTOM_SCENE_DEFAULTS.basePreset,
+    basePreset,
+    view: isCustomView(p.view) ? p.view : CUSTOM_SCENE_DEFAULTS.view,
     framing: num(p.framing, CUSTOM_SCENE_DEFAULTS.framing),
     shiftX: num(p.shiftX, CUSTOM_SCENE_DEFAULTS.shiftX),
     shiftY: num(p.shiftY, CUSTOM_SCENE_DEFAULTS.shiftY),
@@ -185,6 +194,23 @@ function normalizeCustom(raw: Partial<CustomScene> | undefined): CustomScene {
   }
 }
 
+function commonSettings(p: LegacyStored) {
+  return {
+    palette: p.palette ?? DEFAULTS.palette,
+    quality: p.quality ?? DEFAULTS.quality,
+    trail: p.trail ?? DEFAULTS.trail,
+    clock: p.clock ?? DEFAULTS.clock,
+    clockAdaptive: p.clockAdaptive ?? DEFAULTS.clockAdaptive,
+    clockPos: p.clockPos === 'auto' || !p.clockPos ? DEFAULTS.clockPos : p.clockPos,
+    clockSize: p.clockSize ?? DEFAULTS.clockSize,
+    font: p.font ?? DEFAULTS.font,
+    bar: p.bar ?? DEFAULTS.bar,
+    seconds: p.seconds ?? DEFAULTS.seconds,
+    date: typeof p.date === 'boolean' ? (p.date ? 'date' : 'off') : p.date ?? DEFAULTS.date,
+    accent: p.accent ?? DEFAULTS.accent,
+  } satisfies Partial<WpSettings>
+}
+
 function migrateLegacy(p: LegacyStored): WpSettings {
   const view = Math.min(Math.max(Math.round(Number(p.view ?? 0)), 0), 8)
   const composition: CompositionId = isComposition(p.composition) ? p.composition : 'cinematic'
@@ -192,11 +218,12 @@ function migrateLegacy(p: LegacyStored): WpSettings {
   const baseDef = SCENE_PRESETS[basePreset]
   const baseComp = COMPOSITIONS[baseDef.composition]
   const oldComp = COMPOSITIONS[composition]
-
   const framingRatio = oldComp.dist / baseComp.dist
+
   const custom: CustomScene = {
     ...CUSTOM_SCENE_DEFAULTS,
     basePreset,
+    view: viewIdFromIndex(view),
     framing: clamp01((framingRatio - 0.72) / 0.56),
     shiftX: clamp01(0.5 + (oldComp.shift[0] - baseComp.shift[0]) / 0.70),
     shiftY: clamp01(0.5 + (oldComp.shift[1] - baseComp.shift[1]) / 0.60),
@@ -232,22 +259,27 @@ function migrateLegacy(p: LegacyStored): WpSettings {
 
   return {
     ...DEFAULTS,
+    ...commonSettings(p),
     sceneMode: sceneTuned ? 'custom' : 'preset',
     scenePreset: basePreset,
     custom,
-    palette: p.palette ?? DEFAULTS.palette,
-    quality: p.quality ?? DEFAULTS.quality,
-    trail: p.trail ?? DEFAULTS.trail,
-    clock: p.clock ?? DEFAULTS.clock,
-    clockAdaptive: p.clockAdaptive ?? DEFAULTS.clockAdaptive,
-    clockPos: p.clockPos === 'auto' || !p.clockPos ? DEFAULTS.clockPos : p.clockPos,
-    clockSize: p.clockSize ?? DEFAULTS.clockSize,
-    font: p.font ?? DEFAULTS.font,
-    bar: p.bar ?? DEFAULTS.bar,
-    seconds: p.seconds ?? DEFAULTS.seconds,
-    date: typeof p.date === 'boolean' ? (p.date ? 'date' : 'off') : p.date ?? DEFAULTS.date,
-    accent: p.accent ?? DEFAULTS.accent,
   }
+}
+
+function migrateV7(p: LegacyStored): WpSettings {
+  const oldScene = isScenePresetId(p.scenePreset) ? p.scenePreset : 'signature'
+  const oldBase = isScenePresetId(p.custom?.basePreset) ? p.custom!.basePreset! : oldScene
+  const scenePreset = curatedPresetFromLegacy(oldScene)
+  const basePreset = curatedPresetFromLegacy(oldBase)
+  const view = isCustomView(p.custom?.view) ? p.custom!.view! : viewFromLegacyPreset(oldBase)
+  return {
+    ...DEFAULTS,
+    ...p,
+    ...commonSettings(p),
+    sceneMode: p.sceneMode === 'custom' ? 'custom' : 'preset',
+    scenePreset,
+    custom: normalizeCustom({ ...p.custom, basePreset, view }),
+  } as WpSettings
 }
 
 export function load(): WpSettings {
@@ -258,15 +290,15 @@ export function load(): WpSettings {
     const p = JSON.parse(raw) as LegacyStored
 
     if (version < 7 || !p.sceneMode) return migrateLegacy(p)
+    if (version < 8) return migrateV7(p)
 
     return {
       ...DEFAULTS,
       ...p,
+      ...commonSettings(p),
       sceneMode: p.sceneMode === 'custom' ? 'custom' : 'preset',
-      scenePreset: isPreset(p.scenePreset) ? p.scenePreset : DEFAULTS.scenePreset,
+      scenePreset: isPreset(p.scenePreset) ? p.scenePreset : curatedPresetFromLegacy(p.scenePreset),
       custom: normalizeCustom(p.custom),
-      clockPos: p.clockPos === 'auto' || !p.clockPos ? DEFAULTS.clockPos : p.clockPos,
-      date: typeof p.date === 'boolean' ? (p.date ? 'date' : 'off') : p.date ?? DEFAULTS.date,
     } as WpSettings
   } catch {
     return { ...DEFAULTS, custom: { ...CUSTOM_SCENE_DEFAULTS } }
@@ -277,6 +309,7 @@ export function save(s: WpSettings) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s))
     localStorage.setItem(VERSION_KEY, String(CURRENT_VERSION))
+    window.dispatchEvent(new CustomEvent('schwarzschild-settings-changed', { detail: s }))
   } catch {
     /* storage unavailable — session-only settings */
   }
@@ -312,18 +345,21 @@ export function bindWallpaperEngine(apply: (patch: WpPatch) => void): () => void
         patch.sceneMode = pick(props.scenemode.value, ['preset', 'custom'] as const)
       if (props.scenepreset?.value !== undefined) {
         const v = String(props.scenepreset.value)
-        if (isPreset(v)) patch.scenePreset = v
+        if (isScenePresetId(v)) patch.scenePreset = curatedPresetFromLegacy(v)
       }
       if (props.custombase?.value !== undefined) {
         const v = String(props.custombase.value)
-        if (isPreset(v)) custom.basePreset = v
+        if (isScenePresetId(v)) custom.basePreset = curatedPresetFromLegacy(v)
       }
+      if (props.customview?.value !== undefined && isCustomView(props.customview.value))
+        custom.view = props.customview.value
 
-      // Backward-compatible interpretation of the removed v6 properties.
+      // Backward-compatible interpretation of the removed pre-v7 properties.
       if (props.view?.value !== undefined || props.composition?.value !== undefined) {
         const view = Number(props.view?.value ?? 0)
         const comp = isComposition(props.composition?.value) ? props.composition!.value as CompositionId : 'cinematic'
         patch.scenePreset = presetFromLegacy(view, comp)
+        custom.view = viewIdFromIndex(view)
       }
 
       if (props.palette?.value !== undefined)
