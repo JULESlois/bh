@@ -4,6 +4,8 @@ export type ScenePresetId =
   | 'edge' | 'ring' | 'face' | 'near' | 'silhouette' | 'wide' | 'knife' | 'polar'
 export type ClockEngineName = 'monument' | 'eclipse' | 'blade' | 'orbit' | 'depth' | 'quiet' | 'relativistic'
 export type ClockArtName = 'poster' | 'horizon' | 'eclipse' | 'orbit' | 'crop' | 'quiet' | 'caption' | 'blade' | 'relativistic'
+export type ObservationViewId = 'balanced' | 'edge' | 'ring' | 'face' | 'near' | 'silhouette' | 'wide' | 'knife' | 'polar'
+export type CustomViewId = 'preset' | ObservationViewId
 
 export const CAMERA_PRESETS = [
   { dist: 30, incl: 81, fov: 58, expo: 1.0, disk: 1, star: 1 },
@@ -63,32 +65,123 @@ export const CLOCK_ART_LIBRARY: Record<ClockArtName, ClockArt> = {
   relativistic: { name: 'relativistic', engine: 'relativistic', scale: 1.05, width: 3.4, near: 0.90, yBias: -0.12, depth: 0.92 },
 }
 
+export const OBSERVATION_VIEWS: Record<ObservationViewId, { id: ObservationViewId; label: string; short: string; index: number }> = {
+  balanced:   { id: 'balanced', label: 'Balanced', short: 'hero', index: 0 },
+  edge:       { id: 'edge', label: 'Edge-on', short: 'thin disk', index: 1 },
+  ring:       { id: 'ring', label: 'Photon ring', short: 'lensed', index: 2 },
+  face:       { id: 'face', label: 'Face-on', short: 'rotation', index: 3 },
+  near:       { id: 'near', label: 'Near', short: 'material', index: 4 },
+  silhouette: { id: 'silhouette', label: 'Silhouette', short: 'dark field', index: 5 },
+  wide:       { id: 'wide', label: 'Wide', short: 'scale', index: 6 },
+  knife:      { id: 'knife', label: 'Knife-edge', short: 'doppler', index: 7 },
+  polar:      { id: 'polar', label: 'Polar', short: 'circular', index: 8 },
+}
+export const OBSERVATION_VIEW_ORDER: readonly ObservationViewId[] = ['balanced','edge','ring','face','near','silhouette','wide','knife','polar']
+export const isObservationView = (v: unknown): v is ObservationViewId =>
+  typeof v === 'string' && Object.prototype.hasOwnProperty.call(OBSERVATION_VIEWS, v)
+export const isCustomView = (v: unknown): v is CustomViewId => v === 'preset' || isObservationView(v)
+export const viewIdFromIndex = (view: number): ObservationViewId => OBSERVATION_VIEW_ORDER[Math.min(Math.max(Math.round(view), 0), 8)]
+
+interface RuntimeSceneState {
+  sceneMode?: string
+  custom?: { basePreset?: string; view?: CustomViewId }
+}
+let runtimeScene: RuntimeSceneState = {}
+function syncRuntimeScene(value?: RuntimeSceneState) {
+  if (value) {
+    runtimeScene = value
+    return
+  }
+  if (typeof window === 'undefined') return
+  try { runtimeScene = JSON.parse(localStorage.getItem('schwarzschild-wallpaper') || '{}') as RuntimeSceneState } catch { runtimeScene = {} }
+}
+if (typeof window !== 'undefined') {
+  syncRuntimeScene()
+  window.addEventListener('schwarzschild-settings-changed', (event) => {
+    syncRuntimeScene((event as CustomEvent<RuntimeSceneState>).detail)
+  })
+}
+function effectiveView(id: ScenePresetId, canonical: number) {
+  const selected = runtimeScene.custom?.view
+  if (runtimeScene.sceneMode !== 'custom' || runtimeScene.custom?.basePreset !== id || !selected || selected === 'preset') return canonical
+  return isObservationView(selected) ? OBSERVATION_VIEWS[selected].index : canonical
+}
+
 export interface ScenePresetDefinition {
-  id: ScenePresetId; label: string; short: string; description: string
-  family: 'framing' | 'observation'; view: number; composition: CompositionId; clockArt: ClockArtName
+  id: ScenePresetId
+  label: string
+  short: string
+  description: string
+  family: 'framing' | 'observation'
+  readonly view: number
+  composition: CompositionId
+  clockArt: ClockArtName
+}
+
+function scene(
+  id: ScenePresetId,
+  label: string,
+  short: string,
+  description: string,
+  family: ScenePresetDefinition['family'],
+  canonicalView: number,
+  composition: CompositionId,
+  clockArt: ClockArtName,
+): ScenePresetDefinition {
+  return {
+    id, label, short, description, family, composition, clockArt,
+    get view() { return effectiveView(id, canonicalView) },
+  }
 }
 
 export const SCENE_PRESETS: Record<ScenePresetId, ScenePresetDefinition> = {
-  signature:  { id: 'signature', label: 'Signature', short: 'hero', description: 'Balanced off-axis hero composition.', family: 'framing', view: 0, composition: 'cinematic', clockArt: 'poster' },
-  horizon:    { id: 'horizon', label: 'Horizon', short: 'low plane', description: 'Low, asymmetric horizon with long negative space.', family: 'framing', view: 0, composition: 'horizon', clockArt: 'horizon' },
-  terminal:   { id: 'terminal', label: 'Terminal', short: 'diagonal', description: 'Tense diagonal composition with compact framing.', family: 'framing', view: 0, composition: 'terminal', clockArt: 'blade' },
-  centered:   { id: 'centered', label: 'Centered', short: 'formal', description: 'Symmetric scientific portrait of the system.', family: 'framing', view: 0, composition: 'centered', clockArt: 'eclipse' },
-  void:       { id: 'void', label: 'Void', short: 'negative', description: 'Small subject, deep sky and deliberate emptiness.', family: 'framing', view: 0, composition: 'void', clockArt: 'quiet' },
-  close:      { id: 'close', label: 'Close Pass', short: 'depth', description: 'Aggressive crop with material detail near the frame.', family: 'framing', view: 0, composition: 'close', clockArt: 'crop' },
-  edge:       { id: 'edge', label: 'Edge-on', short: 'thin disk', description: 'A thin luminous disk with long optical energy.', family: 'observation', view: 1, composition: 'cinematic', clockArt: 'horizon' },
-  ring:       { id: 'ring', label: 'Photon Ring', short: 'lensed', description: 'Compact higher-order lensed structure takes priority.', family: 'observation', view: 2, composition: 'centered', clockArt: 'eclipse' },
-  face:       { id: 'face', label: 'Face-on', short: 'rotation', description: 'Circular disk structure and differential rotation.', family: 'observation', view: 3, composition: 'centered', clockArt: 'orbit' },
-  near:       { id: 'near', label: 'Near', short: 'material', description: 'Close material study with dense inner-disk detail.', family: 'observation', view: 4, composition: 'close', clockArt: 'crop' },
-  silhouette: { id: 'silhouette', label: 'Silhouette', short: 'dark field', description: 'The disk recedes; sky lensing carries the composition.', family: 'observation', view: 5, composition: 'void', clockArt: 'quiet' },
-  wide:       { id: 'wide', label: 'Wide', short: 'scale', description: 'Environmental scale, sky texture and negative space.', family: 'observation', view: 6, composition: 'void', clockArt: 'caption' },
-  knife:      { id: 'knife', label: 'Knife-edge', short: 'doppler', description: 'Razor disk, strong streak and Doppler asymmetry.', family: 'observation', view: 7, composition: 'horizon', clockArt: 'blade' },
-  polar:      { id: 'polar', label: 'Polar', short: 'circular', description: 'Near-polar geometry with subdued horizontal cues.', family: 'observation', view: 8, composition: 'centered', clockArt: 'orbit' },
+  // Curated presets. Their canonical observation view is part of the artwork.
+  signature: scene('signature', 'Signature', 'hero', 'Balanced off-axis hero composition.', 'framing', 0, 'cinematic', 'poster'),
+  horizon: scene('horizon', 'Horizon', 'low plane', 'Edge-on disk, low horizon and long negative space.', 'framing', 1, 'horizon', 'horizon'),
+  terminal: scene('terminal', 'Terminal', 'diagonal', 'Knife-edge disk in a tense diagonal composition.', 'framing', 7, 'terminal', 'blade'),
+  centered: scene('centered', 'Eclipse', 'lensed', 'Photon-ring study with a formal centered shadow.', 'framing', 2, 'centered', 'eclipse'),
+  void: scene('void', 'Void', 'negative', 'Silhouette view with deep sky and deliberate emptiness.', 'framing', 5, 'void', 'quiet'),
+  close: scene('close', 'Close Pass', 'material', 'Near-disk material study with aggressive depth.', 'framing', 4, 'close', 'crop'),
+  wide: scene('wide', 'Wide', 'scale', 'Environmental scale, sky texture and negative space.', 'framing', 6, 'void', 'caption'),
+  polar: scene('polar', 'Orbital', 'circular', 'Near-polar geometry built around orbital typography.', 'framing', 8, 'centered', 'orbit'),
+
+  // Hidden v7 compatibility definitions. Observation views now live in Custom.
+  edge: scene('edge', 'Edge-on', 'thin disk', 'Legacy observation preset.', 'observation', 1, 'cinematic', 'horizon'),
+  ring: scene('ring', 'Photon Ring', 'lensed', 'Legacy observation preset.', 'observation', 2, 'centered', 'eclipse'),
+  face: scene('face', 'Face-on', 'rotation', 'Legacy observation preset.', 'observation', 3, 'centered', 'orbit'),
+  near: scene('near', 'Near', 'material', 'Legacy observation preset.', 'observation', 4, 'close', 'crop'),
+  silhouette: scene('silhouette', 'Silhouette', 'dark field', 'Legacy observation preset.', 'observation', 5, 'void', 'quiet'),
+  knife: scene('knife', 'Knife-edge', 'doppler', 'Legacy observation preset.', 'observation', 7, 'horizon', 'blade'),
 }
 
-export const SCENE_PRESET_ORDER: readonly ScenePresetId[] = ['signature','horizon','terminal','centered','void','close','edge','ring','face','near','silhouette','wide','knife','polar']
-export const VIEW_PRESET_BY_INDEX: readonly ScenePresetId[] = ['signature','edge','ring','face','near','silhouette','wide','knife','polar']
+/** Only these finished scenes are exposed as presets. */
+export const SCENE_PRESET_ORDER: readonly ScenePresetId[] = ['signature','horizon','terminal','centered','void','close','wide','polar']
+export const isScenePresetId = (v: unknown): v is ScenePresetId =>
+  typeof v === 'string' && Object.prototype.hasOwnProperty.call(SCENE_PRESETS, v)
+
+const LEGACY_TO_CURATED: Record<ScenePresetId, ScenePresetId> = {
+  signature: 'signature', horizon: 'horizon', terminal: 'terminal', centered: 'centered', void: 'void', close: 'close', wide: 'wide', polar: 'polar',
+  edge: 'horizon', ring: 'centered', face: 'polar', near: 'close', silhouette: 'void', knife: 'terminal',
+}
+const LEGACY_VIEW: Record<ScenePresetId, ObservationViewId> = {
+  signature: 'balanced', horizon: 'balanced', terminal: 'balanced', centered: 'balanced', void: 'balanced', close: 'balanced',
+  edge: 'edge', ring: 'ring', face: 'face', near: 'near', silhouette: 'silhouette', wide: 'wide', knife: 'knife', polar: 'polar',
+}
+export const curatedPresetFromLegacy = (v: unknown): ScenePresetId =>
+  isScenePresetId(v) ? LEGACY_TO_CURATED[v] : 'signature'
+export const viewFromLegacyPreset = (v: unknown): ObservationViewId =>
+  isScenePresetId(v) ? LEGACY_VIEW[v] : 'balanced'
+
+export const VIEW_PRESET_BY_INDEX: readonly ScenePresetId[] = ['signature','horizon','centered','polar','close','void','wide','terminal','polar']
 export function presetFromLegacy(view: number, composition: CompositionId): ScenePresetId {
   const v = Math.min(Math.max(Math.round(view), 0), 8)
-  if (v === 0) return composition === 'cinematic' ? 'signature' : composition
+  if (v === 0) {
+    if (composition === 'cinematic') return 'signature'
+    if (composition === 'horizon') return 'horizon'
+    if (composition === 'terminal') return 'terminal'
+    if (composition === 'centered') return 'centered'
+    if (composition === 'void') return 'void'
+    if (composition === 'close') return 'close'
+  }
   return VIEW_PRESET_BY_INDEX[v]
 }
