@@ -9,6 +9,7 @@ import './panel-v2.css'
 import './clock-engine-runtime'
 import './clock-orbit-layout-runtime'
 import './clock-expression-runtime'
+import './scene-model-runtime'
 import Wallpaper from './Wallpaper'
 
 createRoot(document.getElementById('root')!).render(
