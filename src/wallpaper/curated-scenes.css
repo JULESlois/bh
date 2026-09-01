@@ -1,0 +1,156 @@
+/* Curated scene finishing layer.
+ * These rules belong to the eight immutable presets. They do not define new
+ * clock engines; they reduce metadata noise and give each finished scene a
+ * distinct editorial hierarchy after the generic solver has found safe anchors.
+ */
+
+/* Signature — two large typographic anchors, minimal supporting furniture. */
+.wp-clock[data-preset='signature'][data-engine='monument'] .d {
+  max-width: min(24vw, 320px);
+  font-size: clamp(9px, .72vw, 12px);
+  letter-spacing: .24em;
+  opacity: .58;
+}
+.wp-clock[data-preset='signature'][data-engine='monument'] .t i {
+  opacity: .50;
+  letter-spacing: .18em;
+}
+.wp-clock[data-preset='signature'][data-engine='monument'] .sbar {
+  width: min(16vw, 220px);
+  opacity: .42;
+}
+
+/* Horizon — the disk is the horizontal graphic; supporting UI must not invent
+ * another competing line. */
+.wp-clock[data-preset='horizon'][data-engine='blade'] .d {
+  font-size: clamp(8px, .68vw, 11px);
+  letter-spacing: .28em;
+  opacity: .54;
+}
+.wp-clock[data-preset='horizon'][data-engine='blade'] .t i { opacity: .46; }
+.wp-clock[data-preset='horizon'][data-engine='blade'] .sbar { opacity: .28; }
+
+/* Terminal — intentionally harsher and more asymmetric. Date/seconds are
+ * treated like technical annotations instead of a second headline. */
+.wp-clock[data-preset='terminal'][data-engine='blade'] .d {
+  max-width: min(22vw, 250px);
+  font-size: clamp(8px, .62vw, 10px);
+  letter-spacing: .34em;
+  opacity: .44;
+}
+.wp-clock[data-preset='terminal'][data-engine='blade'] .t i {
+  font-size: .095em;
+  letter-spacing: .22em;
+  opacity: .42;
+}
+.wp-clock[data-preset='terminal'][data-engine='blade'] .sbar { opacity: .18; }
+
+/* Eclipse — use the black shadow itself as negative space. HH/MM stay outside
+ * the critical ring while the date becomes a quiet label inside the void. */
+.wp-clock[data-preset='centered'][data-engine='eclipse'] .d {
+  left: var(--hole-x);
+  top: var(--hole-y);
+  transform: translate(-50%, -50%);
+  max-width: min(34vw, 360px);
+  font-size: clamp(8px, .68vw, 11px);
+  letter-spacing: .32em;
+  opacity: .52;
+  white-space: nowrap;
+}
+.wp-clock[data-preset='centered'][data-engine='eclipse'] .t i {
+  font-size: .095em;
+  opacity: .46;
+}
+.wp-clock[data-preset='centered'][data-engine='eclipse'] .hour,
+.wp-clock[data-preset='centered'][data-engine='eclipse'] .minute {
+  text-shadow: 0 2px 16px rgba(0,0,0,.34);
+}
+
+/* Void — typography should feel discovered in the negative space, not placed
+ * on top of it. */
+.wp-clock[data-preset='void'][data-engine='quiet'] {
+  opacity: calc(var(--clock-enter) * .88);
+}
+.wp-clock[data-preset='void'][data-engine='quiet'] .t {
+  font-weight: 190;
+  letter-spacing: .12em;
+}
+.wp-clock[data-preset='void'][data-engine='quiet'] .d {
+  font-size: clamp(8px, .66vw, 10px);
+  letter-spacing: .24em;
+  opacity: .50;
+}
+.wp-clock[data-preset='void'][data-engine='quiet'] .sbar { opacity: .28; }
+
+/* Close Pass — preserve the front/back type planes, but keep metadata from
+ * becoming a third competing depth layer. */
+.wp-clock[data-preset='close'][data-engine='depth'] .hour {
+  --art-opacity: .44;
+  --art-blur: .36px;
+}
+.wp-clock[data-preset='close'][data-engine='depth'] .minute {
+  text-shadow: 0 2px 18px rgba(0,0,0,.72), 0 0 24px rgba(0,0,0,.18);
+}
+.wp-clock[data-preset='close'][data-engine='depth'] .d {
+  font-size: clamp(8px, .66vw, 10px);
+  letter-spacing: .24em;
+  opacity: .48;
+}
+.wp-clock[data-preset='close'][data-engine='depth'] .sbar { opacity: .28; }
+
+/* Wide — time is an editorial counterweight to the landscape, not a hero. */
+.wp-clock[data-preset='wide'][data-engine='monument'] .hour,
+.wp-clock[data-preset='wide'][data-engine='monument'] .minute {
+  text-shadow: 0 2px 20px rgba(0,0,0,.30);
+}
+.wp-clock[data-preset='wide'][data-engine='monument'] .d {
+  max-width: min(22vw, 280px);
+  font-size: clamp(8px, .62vw, 10px);
+  letter-spacing: .30em;
+  opacity: .46;
+}
+.wp-clock[data-preset='wide'][data-engine='monument'] .t i { opacity: .42; }
+.wp-clock[data-preset='wide'][data-engine='monument'] .sbar {
+  width: min(12vw, 180px);
+  opacity: .28;
+}
+
+/* Orbital — the ring and the black-hole shadow are already the ornament. Keep
+ * the orbit phase almost diagrammatic and the numerals light enough to sit
+ * inside the void without turning it into a clock face. */
+.wp-clock[data-preset='polar'][data-engine='orbit']::before {
+  border-color: rgba(232,228,220,.085);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  opacity: .58;
+}
+.wp-clock[data-preset='polar'][data-engine='orbit']::after {
+  width: 3px;
+  height: 3px;
+  box-shadow: 0 0 7px var(--acc), 0 0 14px var(--acc);
+}
+.wp-clock[data-preset='polar'][data-engine='orbit'] .hour,
+.wp-clock[data-preset='polar'][data-engine='orbit'] .minute {
+  font-weight: 188;
+  text-shadow: 0 2px 16px rgba(0,0,0,.28);
+}
+.wp-clock[data-preset='polar'][data-engine='orbit'] .d {
+  font-size: clamp(8px, .62vw, 10px);
+  letter-spacing: .28em;
+  opacity: .48;
+}
+.wp-clock[data-preset='polar'][data-engine='orbit'] .t i {
+  font-size: .09em;
+  opacity: .42;
+}
+
+@media (max-width: 680px) {
+  .wp-clock[data-preset='centered'][data-engine='eclipse'] .d {
+    max-width: 58vw;
+    letter-spacing: .22em;
+  }
+  .wp-clock[data-preset='terminal'][data-engine='blade'] .d,
+  .wp-clock[data-preset='horizon'][data-engine='blade'] .d {
+    display: none;
+  }
+}
