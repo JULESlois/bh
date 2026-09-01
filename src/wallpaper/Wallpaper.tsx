@@ -2,76 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import { Renderer } from '../gl/renderer'
 import { cameraFrom } from '../scene/timeline'
 import { TIME_SCALE } from '../physics/constants'
-import { load, save, bindWallpaperEngine, DEFAULTS, type WpSettings } from './settings'
-
-const PRESETS = [
-  { dist: 30, incl: 81, fov: 58, expo: 1.0, disk: 1, star: 1 },
-  { dist: 27, incl: 86.5, fov: 50, expo: 1.0, disk: 1, star: 1 },
-  { dist: 24, incl: 63, fov: 30, expo: 1.15, disk: 1, star: 0.8 },
-  { dist: 30, incl: 24, fov: 46, expo: 1.05, disk: 1, star: 0.9 },
-  { dist: 16.5, incl: 78, fov: 68, expo: 0.95, disk: 1, star: 0.9 },
-  { dist: 34, incl: 55, fov: 46, expo: 1.05, disk: 0.12, star: 1.7 },
-  { dist: 47, incl: 71, fov: 62, expo: 0.92, disk: 1, star: 1.1 },
-  { dist: 26, incl: 89.6, fov: 44, expo: 1.05, disk: 1, star: 1 },
-  { dist: 26, incl: 13, fov: 44, expo: 1.1, disk: 1, star: 0.85 },
-]
-
-/**
- * View Director: geometry stays physical; these are photographic decisions.
- * User sliders remain the base values and are only relatively directed.
- */
-const VIEW_DIRECTORS = [
-  { framing: 1.00, shift: [0.00, 0.00], roll: 0.0, disk: 1.00, star: 1.00, glow: 1.00, streak: 1.00, expo: 1.00, turb: 1.00, diskOut: 1.00, temp: 1.00, motion: 1.00 },
-  { framing: 0.96, shift: [0.05, -0.02], roll: -2.0, disk: 1.10, star: 0.82, glow: 1.12, streak: 1.28, expo: 0.98, turb: 0.88, diskOut: 0.94, temp: 1.02, motion: 0.82 },
-  { framing: 0.92, shift: [-0.04, 0.03], roll: 1.0, disk: 0.58, star: 0.52, glow: 1.34, streak: 0.34, expo: 0.88, turb: 0.55, diskOut: 0.70, temp: 1.04, motion: 0.34 },
-  { framing: 1.02, shift: [0.02, 0.05], roll: 4.5, disk: 0.96, star: 0.78, glow: 0.82, streak: 0.16, expo: 0.98, turb: 1.12, diskOut: 1.08, temp: 0.99, motion: 0.72 },
-  { framing: 0.94, shift: [0.12, -0.04], roll: -3.0, disk: 1.14, star: 0.64, glow: 1.10, streak: 0.82, expo: 0.94, turb: 1.10, diskOut: 0.90, temp: 1.02, motion: 0.72 },
-  { framing: 1.04, shift: [-0.08, 0.02], roll: 2.0, disk: 0.42, star: 1.42, glow: 0.52, streak: 0.12, expo: 0.86, turb: 0.35, diskOut: 0.82, temp: 0.96, motion: 0.58 },
-  { framing: 1.08, shift: [0.03, 0.05], roll: 6.0, disk: 0.86, star: 1.18, glow: 0.76, streak: 0.50, expo: 0.96, turb: 0.90, diskOut: 1.08, temp: 0.99, motion: 1.16 },
-  { framing: 0.94, shift: [0.08, -0.04], roll: -1.5, disk: 1.20, star: 0.62, glow: 1.18, streak: 1.46, expo: 0.92, turb: 0.80, diskOut: 0.88, temp: 1.06, motion: 0.46 },
-  { framing: 1.00, shift: [-0.02, 0.08], roll: 8.0, disk: 1.02, star: 0.76, glow: 0.78, streak: 0.08, expo: 0.98, turb: 1.18, diskOut: 1.08, temp: 1.00, motion: 0.78 },
-] as const
-
-/**
- * Destination-specific entrance direction. The view still converges through
- * physical camera damping; these values only choreograph the reveal.
- */
-const VIEW_TRANSITIONS = [
-  { duration: 1.35, dip: 0.07, focus: 0.03, starStart: 0.78, starDelay: 0.04, diskStart: 0.88, diskDelay: 0.00, streakStart: 0.55, streakDelay: 0.12, rollKick: 0.8, clockDelay: 0.04 },
-  { duration: 1.55, dip: 0.10, focus: 0.05, starStart: 0.68, starDelay: 0.08, diskStart: 0.78, diskDelay: 0.00, streakStart: 0.16, streakDelay: 0.28, rollKick: -1.4, clockDelay: 0.10 },
-  { duration: 2.10, dip: 0.20, focus: 0.13, starStart: 0.44, starDelay: 0.20, diskStart: 0.62, diskDelay: 0.08, streakStart: 0.18, streakDelay: 0.34, rollKick: 1.2, clockDelay: 0.22 },
-  { duration: 1.70, dip: 0.08, focus: 0.04, starStart: 0.70, starDelay: 0.08, diskStart: 0.76, diskDelay: 0.02, streakStart: 0.18, streakDelay: 0.24, rollKick: 2.0, clockDelay: 0.10 },
-  { duration: 1.45, dip: 0.13, focus: 0.08, starStart: 0.58, starDelay: 0.10, diskStart: 0.82, diskDelay: 0.00, streakStart: 0.36, streakDelay: 0.18, rollKick: -1.2, clockDelay: 0.12 },
-  { duration: 2.25, dip: 0.16, focus: 0.02, starStart: 0.20, starDelay: 0.18, diskStart: 1.20, diskDelay: 0.00, streakStart: 0.08, streakDelay: 0.42, rollKick: 0.8, clockDelay: 0.30 },
-  { duration: 1.85, dip: 0.08, focus: 0.00, starStart: 0.42, starDelay: 0.10, diskStart: 0.72, diskDelay: 0.04, streakStart: 0.28, streakDelay: 0.22, rollKick: 2.8, clockDelay: 0.12 },
-  { duration: 1.95, dip: 0.18, focus: 0.09, starStart: 0.52, starDelay: 0.12, diskStart: 0.74, diskDelay: 0.02, streakStart: 0.03, streakDelay: 0.44, rollKick: -2.5, clockDelay: 0.18 },
-  { duration: 1.80, dip: 0.08, focus: 0.04, starStart: 0.62, starDelay: 0.08, diskStart: 0.78, diskDelay: 0.02, streakStart: 0.12, streakDelay: 0.30, rollKick: 3.2, clockDelay: 0.14 },
-] as const
-
-/** HyperOS-inspired poster behaviour: the clock is part of the composition. */
-const CLOCK_ARTS = [
-  { name: 'poster',  scale: 1.04, width: 3.22, near: 0.56, yBias: -0.34, depth: 0.72 },
-  { name: 'horizon', scale: 0.96, width: 3.38, near: 0.58, yBias:  0.56, depth: 0.58 },
-  { name: 'eclipse', scale: 1.18, width: 3.48, near: 0.94, yBias: -0.18, depth: 0.90 },
-  { name: 'orbit',   scale: 1.02, width: 3.12, near: 0.62, yBias: -0.92, depth: 0.66 },
-  { name: 'crop',    scale: 1.08, width: 3.20, near: 0.82, yBias:  0.48, depth: 0.82 },
-  { name: 'quiet',   scale: 0.82, width: 3.05, near: 0.14, yBias: -0.10, depth: 0.00 },
-  { name: 'caption', scale: 0.88, width: 3.08, near: 0.20, yBias:  0.10, depth: 0.00 },
-  { name: 'blade',   scale: 1.08, width: 3.32, near: 0.88, yBias:  0.64, depth: 0.86 },
-  { name: 'orbit',   scale: 1.00, width: 3.12, near: 0.72, yBias: -1.02, depth: 0.74 },
-] as const
-
-const COMPOSITIONS: Record<
-  WpSettings['composition'],
-  { shift: [number, number]; dist: number; roll: number }
-> = {
-  cinematic: { shift: [0.58, -0.05], dist: 0.84, roll: -5.5 },
-  horizon: { shift: [-0.76, -0.46], dist: 0.68, roll: 3.5 },
-  terminal: { shift: [0.64, 0.34], dist: 0.91, roll: -9.0 },
-  centered: { shift: [0, 0], dist: 1.0, roll: 0 },
-  void: { shift: [0.70, 0.18], dist: 1.48, roll: 7.0 },
-  close: { shift: [0.48, -0.12], dist: 0.52, roll: -4.0 },
-}
+import {
+  bindWallpaperEngine,
+  CUSTOM_SCENE_DEFAULTS,
+  DEFAULTS,
+  load,
+  mergeSettings,
+  save,
+  type CustomScene,
+  type WpSettings,
+} from './settings'
+import {
+  CAMERA_PRESETS,
+  CLOCK_ART_LIBRARY,
+  COMPOSITIONS,
+  SCENE_PRESETS,
+  SCENE_PRESET_ORDER,
+  VIEW_DIRECTORS,
+  VIEW_TRANSITIONS,
+  type ClockArtName,
+  type ScenePresetId,
+} from './presets'
 
 const PALETTES: Record<string, number> = {
   crimson: 0.62,
@@ -83,8 +34,14 @@ const PALETTES: Record<string, number> = {
 const COMPANION_AZ = 2.4
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+const FRAMING_PRESETS = SCENE_PRESET_ORDER.filter((id) => SCENE_PRESETS[id].family === 'framing')
+const OBSERVATION_PRESETS = SCENE_PRESET_ORDER.filter((id) => SCENE_PRESETS[id].family === 'observation')
 
 type V3 = [number, number, number]
+type CustomNumberKey = Exclude<{
+  [K in keyof CustomScene]: CustomScene[K] extends number ? K : never
+}[keyof CustomScene], undefined>
+
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 const smooth01 = (v: number) => {
   const x = clamp(v, 0, 1)
@@ -123,7 +80,7 @@ function Seg(props: {
           tabIndex={0}
           onClick={() => props.on(v)}
           onKeyDown={(e: React.KeyboardEvent<HTMLSpanElement>) => {
-            if (e.key === 'Enter') props.on(v)
+            if (e.key === 'Enter' || e.key === ' ') props.on(v)
           }}
         >
           {label}
@@ -133,9 +90,9 @@ function Seg(props: {
   )
 }
 
-function Group(props: { label: string; value?: string; children: React.ReactNode }) {
+function Group(props: { label: string; value?: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="wctl">
+    <div className={`wctl${props.className ? ` ${props.className}` : ''}`}>
       <div className="wlab">
         <span>{props.label}</span>
         {props.value && <b>{props.value}</b>}
@@ -143,6 +100,78 @@ function Group(props: { label: string; value?: string; children: React.ReactNode
       {props.children}
     </div>
   )
+}
+
+function PresetCard(props: { id: ScenePresetId; active: boolean; onSelect: (id: ScenePresetId) => void }) {
+  const p = SCENE_PRESETS[props.id]
+  return (
+    <button
+      type="button"
+      className={`preset-card${props.active ? ' on' : ''}`}
+      onClick={() => props.onSelect(props.id)}
+    >
+      <span>{p.label}</span>
+      <i>{p.short}</i>
+    </button>
+  )
+}
+
+function PresetCatalog(props: {
+  selected: ScenePresetId
+  onSelect: (id: ScenePresetId) => void
+  compact?: boolean
+}) {
+  const group = (title: string, ids: readonly ScenePresetId[]) => (
+    <div className="preset-family" key={title}>
+      <div className="preset-family-title">{title}</div>
+      <div className={`preset-grid${props.compact ? ' compact' : ''}`}>
+        {ids.map((id) => (
+          <PresetCard key={id} id={id} active={props.selected === id} onSelect={props.onSelect} />
+        ))}
+      </div>
+    </div>
+  )
+  return <>{group('framing studies', FRAMING_PRESETS)}{group('observation studies', OBSERVATION_PRESETS)}</>
+}
+
+function resolveScene(s: WpSettings) {
+  const isCustom = s.sceneMode === 'custom'
+  const controls = isCustom ? s.custom : CUSTOM_SCENE_DEFAULTS
+  const presetId = isCustom ? controls.basePreset : s.scenePreset
+  const preset = SCENE_PRESETS[presetId]
+  const baseComposition = COMPOSITIONS[preset.composition]
+
+  const framingMul = isCustom ? 0.72 + controls.framing * 0.56 : 1
+  const shiftX = isCustom ? (controls.shiftX - 0.5) * 0.70 : 0
+  const shiftY = isCustom ? (controls.shiftY - 0.5) * 0.60 : 0
+  const roll = isCustom ? (controls.roll - 0.5) * 30 : 0
+
+  const artName: ClockArtName =
+    isCustom && controls.clockArt !== 'auto' ? controls.clockArt : preset.clockArt
+  const baseArt = CLOCK_ART_LIBRARY[artName]
+  const art = isCustom
+    ? {
+        ...baseArt,
+        scale: baseArt.scale * (0.72 + controls.clockScale * 0.56),
+        near: clamp(baseArt.near + (controls.clockNear - 0.5) * 0.70, 0, 1),
+        depth: clamp(baseArt.depth + (controls.clockDepth - 0.5) * 0.90, 0, 1),
+      }
+    : baseArt
+
+  return {
+    isCustom,
+    controls,
+    presetId,
+    preset,
+    view: preset.view,
+    composition: {
+      dist: baseComposition.dist * framingMul,
+      shift: [baseComposition.shift[0] + shiftX, baseComposition.shift[1] + shiftY] as [number, number],
+      roll: baseComposition.roll + roll,
+    },
+    art,
+    clockAdaptive: isCustom ? s.clockAdaptive : true,
+  }
 }
 
 export default function Wallpaper() {
@@ -162,12 +191,19 @@ export default function Wallpaper() {
   const [open, setOpen] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
+  const commitSettings = (next: WpSettings) => setS(next)
+  const patchCustom = (patch: Partial<CustomScene>) =>
+    setS((prev) => ({ ...prev, custom: { ...prev.custom, ...patch } }))
+
   useEffect(() => {
     sRef.current = s
     save(s)
   }, [s])
 
-  useEffect(() => bindWallpaperEngine((patch) => setS((p) => ({ ...p, ...patch }))), [])
+  useEffect(
+    () => bindWallpaperEngine((patch) => setS((prev) => mergeSettings(prev, patch))),
+    [],
+  )
 
   useEffect(() => {
     const r = rendererRef.current
@@ -204,10 +240,9 @@ export default function Wallpaper() {
     const trailCanvas = trailRef.current!
     const tctx = trailCanvas.getContext('2d')!
     const tdpr = Math.min(window.devicePixelRatio || 1, 1.5)
-    const initialView = clamp(Math.round(sRef.current.view), 0, 8)
-    const initialP = PRESETS[initialView]
-    const initialV = VIEW_DIRECTORS[initialView]
-    const initialC = COMPOSITIONS[sRef.current.composition]
+    const initial = resolveScene(sRef.current)
+    const initialP = CAMERA_PRESETS[initial.view]
+    const initialV = VIEW_DIRECTORS[initial.view]
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
     const st = {
@@ -225,20 +260,20 @@ export default function Wallpaper() {
       expo: initialP.expo * initialV.expo,
       disk: initialP.disk * initialV.disk,
       star: initialP.star * initialV.star,
-      shiftX: initialC.shift[0] + initialV.shift[0],
-      shiftY: initialC.shift[1] + initialV.shift[1],
-      roll: initialC.roll + initialV.roll,
+      shiftX: initial.composition.shift[0] + initialV.shift[0],
+      shiftY: initial.composition.shift[1] + initialV.shift[1],
+      roll: initial.composition.roll + initialV.roll,
       temp: (PALETTES[sRef.current.palette] ?? 1) * initialV.temp,
-      dout: (14 + 18 * sRef.current.diskSize) * initialV.diskOut,
-      turbV: clamp(sRef.current.turb * initialV.turb, 0, 1),
-      glowV: clamp(sRef.current.glow * initialV.glow, 0, 1.25),
-      streakV: clamp(sRef.current.streak * initialV.streak, 0, 1.4),
+      dout: (14 + 18 * initial.controls.diskSize) * initialV.diskOut,
+      turbV: clamp(initial.controls.turb * initialV.turb, 0, 1),
+      glowV: clamp(initial.controls.glow * initialV.glow, 0, 1.25),
+      streakV: clamp(initial.controls.streak * initialV.streak, 0, 1.4),
       diskClock: 0,
       clockX: window.innerWidth * 0.18,
       clockY: window.innerHeight * 0.82,
-      activeView: initialView,
+      activePreset: initial.presetId,
       transitionT: 1,
-      transitionDur: VIEW_TRANSITIONS[initialView].duration,
+      transitionDur: VIEW_TRANSITIONS[initial.view].duration,
       lastSec: -1,
       lastClockKey: '',
     }
@@ -272,21 +307,22 @@ export default function Wallpaper() {
       st.last = now
       st.clock += dt / 1000
       const set = sRef.current
+      const R = resolveScene(set)
+      const P = CAMERA_PRESETS[R.view]
+      const V = VIEW_DIRECTORS[R.view]
+      const T = VIEW_TRANSITIONS[R.view]
+      const A = R.art
+      const C = R.composition
+      const ctl = R.controls
 
-      const view = clamp(Math.round(set.view), 0, 8)
-      if (view !== st.activeView) {
-        st.activeView = view
+      if (R.presetId !== st.activePreset) {
+        st.activePreset = R.presetId
         st.transitionT = reduceMotion ? 1 : 0
-        st.transitionDur = VIEW_TRANSITIONS[view].duration
+        st.transitionDur = T.duration
       }
       if (st.transitionT < 1)
         st.transitionT = Math.min(1, st.transitionT + dt / 1000 / st.transitionDur)
 
-      const P = PRESETS[view]
-      const V = VIEW_DIRECTORS[view]
-      const T = VIEW_TRANSITIONS[view]
-      const A = CLOCK_ARTS[view]
-      const C = COMPOSITIONS[set.composition]
       const w = window.innerWidth
       const h = window.innerHeight
       const portrait = w < h
@@ -294,23 +330,23 @@ export default function Wallpaper() {
       const sceneRate = st.transitionT < 1 ? 1.45 : 2.2
       const k = 1 - Math.exp((-dt / 1000) * sceneRate)
 
-      st.azim += (dt / 1000) * (0.006 + set.drift * 0.03) * V.motion
-      st.dist += (P.dist * C.dist * V.framing * (1.35 - 0.7 * set.zoom) - st.dist) * k
-      st.incl += (P.incl + (set.tilt - 0.5) * 20 - st.incl) * k
+      st.azim += (dt / 1000) * (0.006 + ctl.drift * 0.03) * V.motion
+      st.dist += (P.dist * C.dist * V.framing * (1.35 - 0.7 * ctl.zoom) - st.dist) * k
+      st.incl += (P.incl + (ctl.tilt - 0.5) * 20 - st.incl) * k
       st.fov += (P.fov - st.fov) * k
-      st.expo += (P.expo * (0.6 + 0.8 * set.expo) * V.expo - st.expo) * k
-      st.disk += (P.disk * (0.4 + 1.2 * set.diskBright) * V.disk - st.disk) * k
+      st.expo += (P.expo * (0.6 + 0.8 * ctl.expo) * V.expo - st.expo) * k
+      st.disk += (P.disk * (0.4 + 1.2 * ctl.diskBright) * V.disk - st.disk) * k
       st.star += (P.star * V.star - st.star) * k
       st.shiftX += ((C.shift[0] + V.shift[0]) * compScale - st.shiftX) * k
       st.shiftY += ((C.shift[1] + V.shift[1]) * compScale - st.shiftY) * k
       st.roll += ((C.roll + V.roll) * (portrait ? 0.72 : 1) - st.roll) * k
       st.temp += ((PALETTES[set.palette] ?? 1) * V.temp - st.temp) * k
-      st.dout += (clamp((14 + 18 * set.diskSize) * V.diskOut, 12, 34) - st.dout) * k
-      st.turbV += (clamp(set.turb * V.turb, 0, 1) - st.turbV) * k
-      st.glowV += (clamp(set.glow * V.glow, 0, 1.25) - st.glowV) * k
-      st.streakV += (clamp(set.streak * V.streak, 0, 1.4) - st.streakV) * k
+      st.dout += (clamp((14 + 18 * ctl.diskSize) * V.diskOut, 12, 34) - st.dout) * k
+      st.turbV += (clamp(ctl.turb * V.turb, 0, 1) - st.turbV) * k
+      st.glowV += (clamp(ctl.glow * V.glow, 0, 1.25) - st.glowV) * k
+      st.streakV += (clamp(ctl.streak * V.streak, 0, 1.4) - st.streakV) * k
 
-      st.diskClock += (dt / 1000) * TIME_SCALE * (set.spin * 2.2)
+      st.diskClock += (dt / 1000) * TIME_SCALE * (ctl.spin * 2.2)
       const damp = 1 - Math.exp((-dt / 1000) * 3.2)
       st.ptx += (st.ptxT - st.ptx) * damp
       st.pty += (st.ptyT - st.pty) * damp
@@ -327,8 +363,8 @@ export default function Wallpaper() {
       const clockReveal = 0.56 + 0.44 * smooth01((tp - T.clockDelay) / Math.max(1 - T.clockDelay, 1e-4))
 
       const breath = Math.sin(st.clock * 0.18) * 0.5
-      const incl = Math.min(Math.max(st.incl + breath + st.pty * 2.6 * set.parallax, 12), 89.8)
-      const azim = st.azim + st.ptx * 0.07 * set.parallax
+      const incl = clamp(st.incl + breath + st.pty * 2.6 * ctl.parallax, 12, 89.8)
+      const azim = st.azim + st.ptx * 0.07 * ctl.parallax
       const cam = cameraFrom(st.dist, incl, azim, st.fov)
       const basis = rollBasis(cam.right as V3, cam.up as V3, st.roll + rollTransient)
 
@@ -345,15 +381,11 @@ export default function Wallpaper() {
       const sy = -basis.right[1]
       const sl = Math.hypot(sx, sy)
       const streakDir: [number, number] = sl > 1e-4 ? [sx / sl, sy / sl] : [1, 0]
-
-      const align = Math.max(
-        0,
-        cam.fwd[0] * compDir[0] + cam.fwd[1] * compDir[1] + cam.fwd[2] * compDir[2],
-      )
+      const align = Math.max(0, cam.fwd[0] * compDir[0] + cam.fwd[1] * compDir[1] + cam.fwd[2] * compDir[2])
       const lensPulse = 0.042 * Math.pow(align, 1050)
       const lensShift: [number, number] = [
-        st.shiftX + st.ptx * 0.024 * set.parallax,
-        st.shiftY - st.pty * 0.018 * set.parallax,
+        st.shiftX + st.ptx * 0.024 * ctl.parallax,
+        st.shiftY - st.pty * 0.018 * ctl.parallax,
       ]
 
       if (set.quality === 'auto') renderer.adapt(dt)
@@ -367,7 +399,7 @@ export default function Wallpaper() {
         time: st.diskClock,
         wallTime: st.clock,
         diskGain: st.disk * diskReveal,
-        starGain: (0.25 + 1.5 * set.stars) * st.star * starReveal,
+        starGain: (0.25 + 1.5 * ctl.stars) * st.star * starReveal,
         falseColor: 0,
         exposure: st.expo * transitionExposure * (1 + lensPulse),
         markPhoton: 0,
@@ -385,7 +417,6 @@ export default function Wallpaper() {
         const d = new Date()
         const ms = d.getMilliseconds()
         const cs = d.getSeconds()
-
         if (barRef.current)
           barRef.current.style.left = `${(((cs + ms / 1000) / 60) * 100).toFixed(2)}%`
 
@@ -394,7 +425,7 @@ export default function Wallpaper() {
           node.dataset.art = A.name
           node.style.setProperty('--clock-enter', clockReveal.toFixed(3))
 
-          if (set.clockAdaptive) {
+          if (R.clockAdaptive) {
             const holeX = 0.5 + lensShift[0] * 0.5
             const holeY = 0.5 - lensShift[1] * 0.5
             const holePxX = holeX * w
@@ -435,11 +466,7 @@ export default function Wallpaper() {
             st.clockY += (ty - st.clockY) * ck
 
             const alignText: 'left' | 'right' | 'center' =
-              A.name === 'eclipse' || A.name === 'orbit'
-                ? 'center'
-                : st.clockX < holePxX
-                  ? 'left'
-                  : 'right'
+              A.name === 'eclipse' || A.name === 'orbit' ? 'center' : st.clockX < holePxX ? 'left' : 'right'
 
             node.style.left = `${st.clockX.toFixed(1)}px`
             node.style.top = `${st.clockY.toFixed(1)}px`
@@ -447,7 +474,6 @@ export default function Wallpaper() {
             node.style.removeProperty('bottom')
             node.style.setProperty('--clock-auto-size', `${autoSize.toFixed(1)}px`)
             node.style.setProperty('--clock-width', `${widthPx.toFixed(1)}px`)
-            node.style.setProperty('--shadow-r', `${shadowR.toFixed(1)}px`)
             node.dataset.align = alignText
 
             const maskNode = timeMaskRef.current
@@ -459,10 +485,7 @@ export default function Wallpaper() {
               const dy = Math.max(Math.abs(holePxY - (rect.top + rect.height * 0.5)) - rect.height * 0.5, 0)
               const maskR = shadowR * A.depth
               const intersects = Math.hypot(dx, dy) < maskR * 0.92
-              const centreDist = Math.hypot(
-                holePxX - (rect.left + rect.width * 0.5),
-                holePxY - (rect.top + rect.height * 0.5),
-              )
+              const centreDist = Math.hypot(holePxX - (rect.left + rect.width * 0.5), holePxY - (rect.top + rect.height * 0.5))
               const legible = centreDist > maskR * 0.30 || A.name === 'eclipse'
 
               if (intersects && legible) {
@@ -472,12 +495,8 @@ export default function Wallpaper() {
                 node.style.setProperty('--depth-in', `${Math.max(maskR - 4, 1).toFixed(1)}px`)
                 node.style.setProperty('--depth-mid', `${(maskR + 2).toFixed(1)}px`)
                 node.style.setProperty('--depth-out', `${(maskR + 10).toFixed(1)}px`)
-              } else {
-                delete node.dataset.depth
-              }
-            } else {
-              delete node.dataset.depth
-            }
+              } else delete node.dataset.depth
+            } else delete node.dataset.depth
           } else {
             node.style.removeProperty('left')
             node.style.removeProperty('top')
@@ -546,37 +565,37 @@ export default function Wallpaper() {
   }, [])
 
   const pct = (x: number) => Math.round(x * 100)
-  type SliderKey =
-    | 'stars'
-    | 'drift'
-    | 'parallax'
-    | 'tilt'
-    | 'zoom'
-    | 'diskBright'
-    | 'diskSize'
-    | 'turb'
-    | 'spin'
-    | 'glow'
-    | 'streak'
-    | 'expo'
+  const customSlider = (label: string, key: CustomNumberKey, fmt?: (x: number) => string) => {
+    const value = s.custom[key] as number
+    return (
+      <Group label={label} value={fmt ? fmt(value) : `${pct(value)}%`}>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={pct(value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchCustom({ [key]: Number(e.target.value) / 100 })}
+        />
+      </Group>
+    )
+  }
 
-  const slider = (label: string, key: SliderKey, fmt?: (x: number) => string) => (
-    <Group label={label} value={fmt ? fmt(s[key]) : `${pct(s[key])}%`}>
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={pct(s[key])}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setS({ ...s, [key]: Number(e.target.value) / 100 } as WpSettings)
-        }
-      />
-    </Group>
-  )
-
+  const selectedId = s.sceneMode === 'preset' ? s.scenePreset : s.custom.basePreset
+  const selectedPreset = SCENE_PRESETS[selectedId]
+  const effectiveAdaptive = s.sceneMode === 'preset' ? true : s.clockAdaptive
   const autoAccent = s.palette === 'blue' ? 'cyan' : 'ember'
   const clockAccent = s.accent === 'auto' ? autoAccent : s.accent
-  const clockLayout = s.clockAdaptive ? ' adaptive' : ` p-${s.clockPos} sz-${s.clockSize}`
+  const clockLayout = effectiveAdaptive ? ' adaptive' : ` p-${s.clockPos} sz-${s.clockSize}`
+
+  const enterCustom = (basePreset: ScenePresetId) => {
+    commitSettings({
+      ...s,
+      sceneMode: 'custom',
+      custom: { ...CUSTOM_SCENE_DEFAULTS, basePreset },
+    })
+  }
+  const setCustomBase = (basePreset: ScenePresetId) =>
+    commitSettings({ ...s, custom: { ...CUSTOM_SCENE_DEFAULTS, basePreset } })
 
   return (
     <>
@@ -584,10 +603,7 @@ export default function Wallpaper() {
       <canvas className="wp-trail" ref={trailRef} />
 
       {s.clock !== 'off' && (
-        <div
-          ref={clockRef}
-          className={`wp-clock${clockLayout} ac-${clockAccent} f-${s.font}`}
-        >
+        <div ref={clockRef} className={`wp-clock${clockLayout} ac-${clockAccent} f-${s.font}`}>
           <div className="depth-time" ref={timeMaskRef}>
             <div className="t">
               <span className="hour" ref={hRef} />
@@ -595,11 +611,7 @@ export default function Wallpaper() {
               <i ref={secRef} />
             </div>
           </div>
-          {s.bar && (
-            <div className="sbar" aria-hidden="true">
-              <i ref={barRef} />
-            </div>
-          )}
+          {s.bar && <div className="sbar" aria-hidden="true"><i ref={barRef} /></div>}
           {s.date !== 'off' && <div className="d" ref={dateRef} />}
         </div>
       )}
@@ -615,230 +627,215 @@ export default function Wallpaper() {
         }}
       />
 
-      <aside className={`wp-panel${open ? ' open' : ''}`}>
-        <div className="ht">Schwarzschild</div>
-
-        <div className="wp-sec">composition</div>
-        <Group label="framing">
-          <Seg
-            grid
-            cur={s.composition}
-            opts={[
-              ['cinematic', 'cinematic'],
-              ['horizon', 'horizon'],
-              ['terminal', 'terminal'],
-              ['centered', 'center'],
-              ['void', 'void'],
-              ['close', 'close'],
-            ]}
-            on={(v) => setS({ ...s, composition: v as WpSettings['composition'] })}
-          />
-        </Group>
-
-        <Group label="view · directed">
-          <Seg
-            grid
-            cur={String(s.view)}
-            opts={[
-              ['0', 'signature'],
-              ['1', 'edge-on'],
-              ['7', 'knife-edge'],
-              ['2', 'ring'],
-              ['4', 'near'],
-              ['3', 'face-on'],
-              ['8', 'polar'],
-              ['5', 'silhouette'],
-              ['6', 'wide'],
-            ]}
-            on={(v) => setS({ ...s, view: Number(v) })}
-          />
-        </Group>
-
-        {slider('tilt', 'tilt', (x) => `${((x - 0.5) * 20).toFixed(0)}°`)}
-        {slider('zoom', 'zoom', (x) => `×${(1.35 - 0.7 * x).toFixed(2)}`)}
-        {slider('orbit drift', 'drift')}
-        {slider('parallax', 'parallax')}
-
-        <div className="wp-sec">disk</div>
-        <Group label="palette">
-          <Seg
-            cur={s.palette}
-            opts={[
-              ['crimson', 'crimson'],
-              ['ember', 'ember'],
-              ['gold', 'gold'],
-              ['blue', 'blue'],
-            ]}
-            on={(v) => setS({ ...s, palette: v as WpSettings['palette'] })}
-          />
-        </Group>
-        {slider('brightness', 'diskBright')}
-        {slider('outer radius', 'diskSize', (x) => `${Math.round(14 + 18 * x)} M`)}
-        {slider('turbulence', 'turb')}
-        {slider('rotation', 'spin', (x) => `×${(x * 2.2).toFixed(1)}`)}
-
-        <div className="wp-sec">image</div>
-        {slider('stars', 'stars')}
-        {slider('bloom', 'glow')}
-        {slider('streak', 'streak')}
-        {slider('exposure', 'expo', (x) => `×${(0.6 + 0.8 * x).toFixed(2)}`)}
-        <div className="wpair">
-          <Group label="trail">
-            <Seg
-              cur={s.trail ? 'on' : 'off'}
-              opts={[
-                ['off', 'off'],
-                ['on', 'on'],
-              ]}
-              on={(v) => setS({ ...s, trail: v === 'on' })}
-            />
-          </Group>
-          <Group label="quality">
-            <Seg
-              cur={s.quality}
-              opts={[
-                ['auto', 'auto'],
-                ['eco', 'eco'],
-                ['max', 'max'],
-              ]}
-              on={(v) => setS({ ...s, quality: v as WpSettings['quality'] })}
-            />
-          </Group>
+      <aside className={`wp-panel panel-v2${open ? ' open' : ''}`}>
+        <div className="panel-head">
+          <div>
+            <div className="ht">Schwarzschild</div>
+            <div className="panel-sub">{s.sceneMode === 'preset' ? 'directed preset' : `custom · ${selectedPreset.label}`}</div>
+          </div>
+          <span className="panel-state">{s.sceneMode}</span>
         </div>
 
-        <div className="wp-sec">clock</div>
-        <div className="wpair">
-          <Group label="mode">
+        <div className="mode-switch">
+          <Seg
+            cur={s.sceneMode}
+            opts={[[ 'preset', 'presets' ], [ 'custom', 'custom' ]]}
+            on={(v) => {
+              if (v === 'preset') commitSettings({ ...s, sceneMode: 'preset', scenePreset: selectedId })
+              else if (s.custom.basePreset === s.scenePreset) commitSettings({ ...s, sceneMode: 'custom' })
+              else enterCustom(s.scenePreset)
+            }}
+          />
+        </div>
+
+        <section className="panel-block scene-block">
+          <div className="wp-sec">scene</div>
+          {s.sceneMode === 'preset' ? (
+            <>
+              <PresetCatalog selected={s.scenePreset} onSelect={(scenePreset) => commitSettings({ ...s, scenePreset })} />
+              <div className="preset-note">
+                <b>{selectedPreset.label}</b>
+                <span>{selectedPreset.description}</span>
+                <button type="button" onClick={() => enterCustom(s.scenePreset)}>customize this preset</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="base-label">base preset · immutable source</div>
+              <PresetCatalog selected={s.custom.basePreset} onSelect={setCustomBase} compact />
+              <div className="preset-note custom-note">
+                <b>{selectedPreset.label}</b>
+                <span>{selectedPreset.description}</span>
+                <button type="button" onClick={() => setCustomBase(s.custom.basePreset)}>restore base values</button>
+              </div>
+
+              <details className="wp-fold" open>
+                <summary>camera / framing</summary>
+                {customSlider('framing', 'framing', (x) => `×${(0.72 + x * 0.56).toFixed(2)}`)}
+                <div className="wpair">
+                  {customSlider('shift x', 'shiftX', (x) => `${((x - 0.5) * 0.70).toFixed(2)}`)}
+                  {customSlider('shift y', 'shiftY', (x) => `${((x - 0.5) * 0.60).toFixed(2)}`)}
+                </div>
+                <div className="wpair">
+                  {customSlider('roll', 'roll', (x) => `${((x - 0.5) * 30).toFixed(0)}°`)}
+                  {customSlider('tilt', 'tilt', (x) => `${((x - 0.5) * 20).toFixed(0)}°`)}
+                </div>
+                {customSlider('zoom', 'zoom', (x) => `×${(1.35 - 0.7 * x).toFixed(2)}`)}
+              </details>
+
+              <details className="wp-fold">
+                <summary>material / light</summary>
+                <div className="wpair">
+                  {customSlider('disk', 'diskBright')}
+                  {customSlider('radius', 'diskSize', (x) => `${Math.round(14 + 18 * x)} M`)}
+                </div>
+                <div className="wpair">
+                  {customSlider('turbulence', 'turb')}
+                  {customSlider('rotation', 'spin', (x) => `×${(x * 2.2).toFixed(1)}`)}
+                </div>
+                <div className="wpair">
+                  {customSlider('stars', 'stars')}
+                  {customSlider('exposure', 'expo', (x) => `×${(0.6 + 0.8 * x).toFixed(2)}`)}
+                </div>
+                <div className="wpair">
+                  {customSlider('bloom', 'glow')}
+                  {customSlider('streak', 'streak')}
+                </div>
+              </details>
+
+              <details className="wp-fold">
+                <summary>motion / response</summary>
+                <div className="wpair">
+                  {customSlider('orbit drift', 'drift')}
+                  {customSlider('parallax', 'parallax')}
+                </div>
+              </details>
+
+              <details className="wp-fold">
+                <summary>clock composition</summary>
+                <Group label="art direction">
+                  <Seg
+                    grid
+                    cur={s.custom.clockArt}
+                    opts={[
+                      ['auto', 'preset'], ['poster', 'poster'], ['horizon', 'horizon'],
+                      ['eclipse', 'eclipse'], ['orbit', 'orbit'], ['crop', 'crop'],
+                      ['quiet', 'quiet'], ['caption', 'caption'], ['blade', 'blade'],
+                    ]}
+                    on={(v) => patchCustom({ clockArt: v as CustomScene['clockArt'] })}
+                  />
+                </Group>
+                <div className="wpair">
+                  {customSlider('type scale', 'clockScale', (x) => `×${(0.72 + x * 0.56).toFixed(2)}`)}
+                  {customSlider('proximity', 'clockNear')}
+                </div>
+                {customSlider('depth overlap', 'clockDepth')}
+                <div className="wpair">
+                  <Group label="layout">
+                    <Seg
+                      cur={s.clockAdaptive ? 'adaptive' : 'manual'}
+                      opts={[[ 'adaptive', 'adaptive' ], [ 'manual', 'manual' ]]}
+                      on={(v) => commitSettings({ ...s, clockAdaptive: v === 'adaptive' })}
+                    />
+                  </Group>
+                  {!s.clockAdaptive ? (
+                    <Group label="size">
+                      <Seg
+                        cur={s.clockSize}
+                        opts={[[ 's', 'small' ], [ 'm', 'medium' ], [ 'l', 'large' ]]}
+                        on={(v) => commitSettings({ ...s, clockSize: v as WpSettings['clockSize'] })}
+                      />
+                    </Group>
+                  ) : <div />}
+                </div>
+                {!s.clockAdaptive && (
+                  <Group label="manual position">
+                    <Seg
+                      cur={s.clockPos}
+                      opts={[[ 'tl', 'top·L' ], [ 'tr', 'top·R' ], [ 'bl', 'low·L' ], [ 'bc', 'low·C' ], [ 'br', 'low·R' ]]}
+                      on={(v) => commitSettings({ ...s, clockPos: v as WpSettings['clockPos'] })}
+                    />
+                  </Group>
+                )}
+              </details>
+            </>
+          )}
+        </section>
+
+        <section className="panel-block">
+          <div className="wp-sec">look</div>
+          <Group label="palette">
             <Seg
-              cur={s.clock}
-              opts={[
-                ['off', 'off'],
-                ['24', '24h'],
-                ['12', '12h'],
-              ]}
-              on={(v) => setS({ ...s, clock: v as WpSettings['clock'] })}
+              cur={s.palette}
+              opts={[[ 'crimson', 'crimson' ], [ 'ember', 'ember' ], [ 'gold', 'gold' ], [ 'blue', 'blue' ]]}
+              on={(v) => commitSettings({ ...s, palette: v as WpSettings['palette'] })}
             />
           </Group>
-          {s.clock !== 'off' ? (
-            <Group label="layout">
+          <div className="wpair">
+            <Group label="quality">
               <Seg
-                cur={s.clockAdaptive ? 'adaptive' : 'manual'}
-                opts={[
-                  ['adaptive', 'adaptive'],
-                  ['manual', 'manual'],
-                ]}
-                on={(v) => setS({ ...s, clockAdaptive: v === 'adaptive' })}
+                cur={s.quality}
+                opts={[[ 'auto', 'auto' ], [ 'eco', 'eco' ], [ 'max', 'max' ]]}
+                on={(v) => commitSettings({ ...s, quality: v as WpSettings['quality'] })}
               />
             </Group>
-          ) : (
-            <div />
-          )}
-        </div>
+            <Group label="trail">
+              <Seg
+                cur={s.trail ? 'on' : 'off'}
+                opts={[[ 'off', 'off' ], [ 'on', 'on' ]]}
+                on={(v) => commitSettings({ ...s, trail: v === 'on' })}
+              />
+            </Group>
+          </div>
+        </section>
 
-        {s.clock !== 'off' && (
-          <>
-            <div className="wpair">
-              <Group label="font">
-                <Seg
-                  cur={s.font}
-                  opts={[
-                    ['mono', 'mono'],
-                    ['display', 'disp'],
-                    ['thin', 'thin'],
-                  ]}
-                  on={(v) => setS({ ...s, font: v as WpSettings['font'] })}
-                />
-              </Group>
+        <section className="panel-block">
+          <div className="wp-sec">clock</div>
+          <div className="wpair">
+            <Group label="mode">
+              <Seg
+                cur={s.clock}
+                opts={[[ 'off', 'off' ], [ '24', '24h' ], [ '12', '12h' ]]}
+                on={(v) => commitSettings({ ...s, clock: v as WpSettings['clock'] })}
+              />
+            </Group>
+            <Group label="font">
+              <Seg
+                cur={s.font}
+                opts={[[ 'mono', 'mono' ], [ 'display', 'disp' ], [ 'thin', 'thin' ]]}
+                on={(v) => commitSettings({ ...s, font: v as WpSettings['font'] })}
+              />
+            </Group>
+          </div>
+          {s.clock !== 'off' && (
+            <>
               <Group label="accent">
                 <Seg
                   cur={s.accent}
-                  opts={[
-                    ['auto', 'auto'],
-                    ['cyan', 'cyan'],
-                    ['ember', 'warm'],
-                    ['mono', 'mono'],
-                  ]}
-                  on={(v) => setS({ ...s, accent: v as WpSettings['accent'] })}
+                  opts={[[ 'auto', 'auto' ], [ 'cyan', 'cyan' ], [ 'ember', 'warm' ], [ 'mono', 'mono' ]]}
+                  on={(v) => commitSettings({ ...s, accent: v as WpSettings['accent'] })}
                 />
               </Group>
-            </div>
-
-            {!s.clockAdaptive && (
-              <>
-                <Group label="position">
-                  <Seg
-                    cur={s.clockPos}
-                    opts={[
-                      ['tl', 'top·L'],
-                      ['tr', 'top·R'],
-                      ['bl', 'low·L'],
-                      ['bc', 'low·C'],
-                      ['br', 'low·R'],
-                    ]}
-                    on={(v) => setS({ ...s, clockPos: v as WpSettings['clockPos'] })}
-                  />
+              <div className="wpair">
+                <Group label="minute scale">
+                  <Seg cur={s.bar ? 'on' : 'off'} opts={[[ 'off', 'off' ], [ 'on', 'on' ]]} on={(v) => commitSettings({ ...s, bar: v === 'on' })} />
                 </Group>
-                <Group label="size">
-                  <Seg
-                    cur={s.clockSize}
-                    opts={[
-                      ['s', 'small'],
-                      ['m', 'medium'],
-                      ['l', 'large'],
-                    ]}
-                    on={(v) => setS({ ...s, clockSize: v as WpSettings['clockSize'] })}
-                  />
+                <Group label="seconds">
+                  <Seg cur={s.seconds ? 'on' : 'off'} opts={[[ 'off', 'off' ], [ 'on', 'on' ]]} on={(v) => commitSettings({ ...s, seconds: v === 'on' })} />
                 </Group>
-              </>
-            )}
-
-            <div className="wpair">
-              <Group label="minute scale">
-                <Seg
-                  cur={s.bar ? 'on' : 'off'}
-                  opts={[
-                    ['off', 'off'],
-                    ['on', 'on'],
-                  ]}
-                  on={(v) => setS({ ...s, bar: v === 'on' })}
-                />
+              </div>
+              <Group label="date">
+                <Seg cur={s.date} opts={[[ 'off', 'off' ], [ 'date', 'date' ], [ 'full', 'full' ]]} on={(v) => commitSettings({ ...s, date: v as WpSettings['date'] })} />
               </Group>
-              <Group label="seconds">
-                <Seg
-                  cur={s.seconds ? 'on' : 'off'}
-                  opts={[
-                    ['off', 'off'],
-                    ['on', 'on'],
-                  ]}
-                  on={(v) => setS({ ...s, seconds: v === 'on' })}
-                />
-              </Group>
-            </div>
+            </>
+          )}
+        </section>
 
-            <Group label="date">
-              <Seg
-                cur={s.date}
-                opts={[
-                  ['off', 'off'],
-                  ['date', 'date'],
-                  ['full', 'full'],
-                ]}
-                on={(v) => setS({ ...s, date: v as WpSettings['date'] })}
-              />
-            </Group>
-          </>
-        )}
-
-        <div
-          className="wp-reset"
-          role="button"
-          tabIndex={0}
-          onClick={() => setS({ ...DEFAULTS })}
-          onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-            if (e.key === 'Enter') setS({ ...DEFAULTS })
-          }}
-        >
-          reset defaults
+        <div className="reset-row">
+          {s.sceneMode === 'custom' && (
+            <button type="button" onClick={() => setCustomBase(s.custom.basePreset)}>restore custom</button>
+          )}
+          <button type="button" className="danger" onClick={() => commitSettings({ ...DEFAULTS, custom: { ...CUSTOM_SCENE_DEFAULTS } })}>reset all</button>
         </div>
       </aside>
 
