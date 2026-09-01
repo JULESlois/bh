@@ -1,0 +1,36 @@
+/* Geometry-coupled typography.
+ * The primary solver owns safe placement; these individual transform properties
+ * add small scene-derived deformations without replacing the preset transforms. */
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .hour,
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .minute {
+  translate: var(--geo-shift-x, 0px) var(--geo-shift-y, 0px);
+  rotate: var(--geo-rotate, 0deg);
+  scale: var(--geo-scale-x, 1) var(--geo-scale-y, 1);
+  letter-spacing: var(--geo-track, inherit);
+  font-weight: var(--geo-weight, inherit);
+  will-change: translate, rotate, scale;
+}
+
+/* The accretion-disk engines expose the actual bAxis sign. Approaching type is
+ * optically heavier/brighter, while the receding side becomes more attenuated. */
+.wp-clock[data-engine='blade'] .hour,
+.wp-clock[data-engine='blade'] .minute {
+  filter: brightness(var(--geo-bright, 1));
+  text-shadow: var(--geo-shadow, none);
+}
+
+@media (max-width: 680px) {
+  .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .hour,
+  .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .minute {
+    /* Runtime already clamps deformation. This extra cap keeps narrow screens
+       from turning intentional edge tension into accidental clipping. */
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .hour,
+  .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .minute {
+    will-change: auto;
+  }
+}
