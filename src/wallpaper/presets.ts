@@ -1,20 +1,9 @@
 export type CompositionId = 'cinematic' | 'horizon' | 'terminal' | 'centered' | 'void' | 'close'
 export type ScenePresetId =
-  | 'signature'
-  | 'horizon'
-  | 'terminal'
-  | 'centered'
-  | 'void'
-  | 'close'
-  | 'edge'
-  | 'ring'
-  | 'face'
-  | 'near'
-  | 'silhouette'
-  | 'wide'
-  | 'knife'
-  | 'polar'
-export type ClockArtName = 'poster' | 'horizon' | 'eclipse' | 'orbit' | 'crop' | 'quiet' | 'caption' | 'blade'
+  | 'signature' | 'horizon' | 'terminal' | 'centered' | 'void' | 'close'
+  | 'edge' | 'ring' | 'face' | 'near' | 'silhouette' | 'wide' | 'knife' | 'polar'
+export type ClockEngineName = 'monument' | 'eclipse' | 'blade' | 'orbit' | 'depth' | 'quiet' | 'relativistic'
+export type ClockArtName = 'poster' | 'horizon' | 'eclipse' | 'orbit' | 'crop' | 'quiet' | 'caption' | 'blade' | 'relativistic'
 
 export const CAMERA_PRESETS = [
   { dist: 30, incl: 81, fov: 58, expo: 1.0, disk: 1, star: 1 },
@@ -61,54 +50,43 @@ export const COMPOSITIONS: Record<CompositionId, { shift: readonly [number, numb
   close: { shift: [0.48, -0.12], dist: 0.52, roll: -4.0 },
 }
 
-export const CLOCK_ART_LIBRARY: Record<ClockArtName, { name: ClockArtName; scale: number; width: number; near: number; yBias: number; depth: number }> = {
-  poster:  { name: 'poster',  scale: 1.04, width: 3.22, near: 0.56, yBias: -0.34, depth: 0.72 },
-  horizon: { name: 'horizon', scale: 0.96, width: 3.38, near: 0.58, yBias:  0.56, depth: 0.58 },
-  eclipse: { name: 'eclipse', scale: 1.18, width: 3.48, near: 0.94, yBias: -0.18, depth: 0.90 },
-  orbit:   { name: 'orbit',   scale: 1.02, width: 3.12, near: 0.62, yBias: -0.92, depth: 0.66 },
-  crop:    { name: 'crop',    scale: 1.08, width: 3.20, near: 0.82, yBias:  0.48, depth: 0.82 },
-  quiet:   { name: 'quiet',   scale: 0.82, width: 3.05, near: 0.14, yBias: -0.10, depth: 0.00 },
-  caption: { name: 'caption', scale: 0.88, width: 3.08, near: 0.20, yBias:  0.10, depth: 0.00 },
-  blade:   { name: 'blade',   scale: 1.08, width: 3.32, near: 0.88, yBias:  0.64, depth: 0.86 },
+type ClockArt = { name: ClockArtName; engine: ClockEngineName; scale: number; width: number; near: number; yBias: number; depth: number }
+export const CLOCK_ART_LIBRARY: Record<ClockArtName, ClockArt> = {
+  poster:       { name: 'poster',       engine: 'monument',     scale: 1.08, width: 3.2, near: 0.56, yBias: -0.34, depth: 0.58 },
+  horizon:      { name: 'horizon',      engine: 'blade',        scale: 1.00, width: 3.4, near: 0.64, yBias:  0.48, depth: 0.52 },
+  eclipse:      { name: 'eclipse',      engine: 'eclipse',      scale: 1.20, width: 3.5, near: 0.96, yBias: -0.10, depth: 0.94 },
+  orbit:        { name: 'orbit',        engine: 'orbit',        scale: 1.02, width: 3.1, near: 0.66, yBias: -0.90, depth: 0.58 },
+  crop:         { name: 'crop',         engine: 'depth',        scale: 1.12, width: 3.2, near: 0.86, yBias:  0.40, depth: 0.88 },
+  quiet:        { name: 'quiet',        engine: 'quiet',        scale: 0.80, width: 3.0, near: 0.12, yBias: -0.10, depth: 0.00 },
+  caption:      { name: 'caption',      engine: 'monument',     scale: 0.88, width: 3.0, near: 0.18, yBias:  0.08, depth: 0.00 },
+  blade:        { name: 'blade',        engine: 'blade',        scale: 1.10, width: 3.3, near: 0.92, yBias:  0.58, depth: 0.86 },
+  relativistic: { name: 'relativistic', engine: 'relativistic', scale: 1.05, width: 3.4, near: 0.90, yBias: -0.12, depth: 0.92 },
 }
 
 export interface ScenePresetDefinition {
-  id: ScenePresetId
-  label: string
-  short: string
-  description: string
-  family: 'framing' | 'observation'
-  view: number
-  composition: CompositionId
-  clockArt: ClockArtName
+  id: ScenePresetId; label: string; short: string; description: string
+  family: 'framing' | 'observation'; view: number; composition: CompositionId; clockArt: ClockArtName
 }
 
 export const SCENE_PRESETS: Record<ScenePresetId, ScenePresetDefinition> = {
-  signature:  { id: 'signature',  label: 'Signature',  short: 'hero',      description: 'Balanced off-axis hero composition.',             family: 'framing',     view: 0, composition: 'cinematic', clockArt: 'poster' },
-  horizon:    { id: 'horizon',    label: 'Horizon',    short: 'low plane', description: 'Low, asymmetric horizon with long negative space.', family: 'framing',     view: 0, composition: 'horizon',   clockArt: 'horizon' },
-  terminal:   { id: 'terminal',   label: 'Terminal',   short: 'diagonal',  description: 'Tense diagonal composition with compact framing.',   family: 'framing',     view: 0, composition: 'terminal',  clockArt: 'blade' },
-  centered:   { id: 'centered',   label: 'Centered',   short: 'formal',    description: 'Symmetric scientific portrait of the system.',       family: 'framing',     view: 0, composition: 'centered',  clockArt: 'orbit' },
-  void:       { id: 'void',       label: 'Void',       short: 'negative',  description: 'Small subject, deep sky and deliberate emptiness.',    family: 'framing',     view: 0, composition: 'void',      clockArt: 'quiet' },
-  close:      { id: 'close',      label: 'Close Pass', short: 'crop',      description: 'Aggressive crop with material detail near the frame.', family: 'framing',     view: 0, composition: 'close',     clockArt: 'crop' },
-  edge:       { id: 'edge',       label: 'Edge-on',    short: 'thin disk', description: 'A thin luminous disk with long optical energy.',       family: 'observation', view: 1, composition: 'cinematic', clockArt: 'horizon' },
-  ring:       { id: 'ring',       label: 'Photon Ring',short: 'lensed',    description: 'Compact higher-order lensed structure takes priority.', family: 'observation', view: 2, composition: 'centered',  clockArt: 'eclipse' },
-  face:       { id: 'face',       label: 'Face-on',    short: 'rotation',  description: 'Circular disk structure and differential rotation.',     family: 'observation', view: 3, composition: 'centered',  clockArt: 'orbit' },
-  near:       { id: 'near',       label: 'Near',       short: 'material',  description: 'Close material study with dense inner-disk detail.',      family: 'observation', view: 4, composition: 'close',     clockArt: 'crop' },
-  silhouette: { id: 'silhouette', label: 'Silhouette', short: 'dark field',description: 'The disk recedes; sky lensing carries the composition.', family: 'observation', view: 5, composition: 'void',      clockArt: 'quiet' },
-  wide:       { id: 'wide',       label: 'Wide',       short: 'scale',     description: 'Environmental scale, sky texture and negative space.',    family: 'observation', view: 6, composition: 'void',      clockArt: 'caption' },
-  knife:      { id: 'knife',      label: 'Knife-edge', short: 'doppler',   description: 'Razor disk, strong streak and Doppler asymmetry.',        family: 'observation', view: 7, composition: 'horizon',   clockArt: 'blade' },
-  polar:      { id: 'polar',      label: 'Polar',      short: 'circular',  description: 'Near-polar geometry with subdued horizontal cues.',       family: 'observation', view: 8, composition: 'centered',  clockArt: 'orbit' },
+  signature:  { id: 'signature', label: 'Signature', short: 'hero', description: 'Balanced off-axis hero composition.', family: 'framing', view: 0, composition: 'cinematic', clockArt: 'poster' },
+  horizon:    { id: 'horizon', label: 'Horizon', short: 'low plane', description: 'Low, asymmetric horizon with long negative space.', family: 'framing', view: 0, composition: 'horizon', clockArt: 'horizon' },
+  terminal:   { id: 'terminal', label: 'Terminal', short: 'diagonal', description: 'Tense diagonal composition with compact framing.', family: 'framing', view: 0, composition: 'terminal', clockArt: 'blade' },
+  centered:   { id: 'centered', label: 'Centered', short: 'formal', description: 'Symmetric scientific portrait of the system.', family: 'framing', view: 0, composition: 'centered', clockArt: 'eclipse' },
+  void:       { id: 'void', label: 'Void', short: 'negative', description: 'Small subject, deep sky and deliberate emptiness.', family: 'framing', view: 0, composition: 'void', clockArt: 'quiet' },
+  close:      { id: 'close', label: 'Close Pass', short: 'depth', description: 'Aggressive crop with material detail near the frame.', family: 'framing', view: 0, composition: 'close', clockArt: 'crop' },
+  edge:       { id: 'edge', label: 'Edge-on', short: 'thin disk', description: 'A thin luminous disk with long optical energy.', family: 'observation', view: 1, composition: 'cinematic', clockArt: 'horizon' },
+  ring:       { id: 'ring', label: 'Photon Ring', short: 'lensed', description: 'Compact higher-order lensed structure takes priority.', family: 'observation', view: 2, composition: 'centered', clockArt: 'eclipse' },
+  face:       { id: 'face', label: 'Face-on', short: 'rotation', description: 'Circular disk structure and differential rotation.', family: 'observation', view: 3, composition: 'centered', clockArt: 'orbit' },
+  near:       { id: 'near', label: 'Near', short: 'material', description: 'Close material study with dense inner-disk detail.', family: 'observation', view: 4, composition: 'close', clockArt: 'crop' },
+  silhouette: { id: 'silhouette', label: 'Silhouette', short: 'dark field', description: 'The disk recedes; sky lensing carries the composition.', family: 'observation', view: 5, composition: 'void', clockArt: 'quiet' },
+  wide:       { id: 'wide', label: 'Wide', short: 'scale', description: 'Environmental scale, sky texture and negative space.', family: 'observation', view: 6, composition: 'void', clockArt: 'caption' },
+  knife:      { id: 'knife', label: 'Knife-edge', short: 'doppler', description: 'Razor disk, strong streak and Doppler asymmetry.', family: 'observation', view: 7, composition: 'horizon', clockArt: 'blade' },
+  polar:      { id: 'polar', label: 'Polar', short: 'circular', description: 'Near-polar geometry with subdued horizontal cues.', family: 'observation', view: 8, composition: 'centered', clockArt: 'orbit' },
 }
 
-export const SCENE_PRESET_ORDER: readonly ScenePresetId[] = [
-  'signature', 'horizon', 'terminal', 'centered', 'void', 'close',
-  'edge', 'ring', 'face', 'near', 'silhouette', 'wide', 'knife', 'polar',
-]
-
-export const VIEW_PRESET_BY_INDEX: readonly ScenePresetId[] = [
-  'signature', 'edge', 'ring', 'face', 'near', 'silhouette', 'wide', 'knife', 'polar',
-]
-
+export const SCENE_PRESET_ORDER: readonly ScenePresetId[] = ['signature','horizon','terminal','centered','void','close','edge','ring','face','near','silhouette','wide','knife','polar']
+export const VIEW_PRESET_BY_INDEX: readonly ScenePresetId[] = ['signature','edge','ring','face','near','silhouette','wide','knife','polar']
 export function presetFromLegacy(view: number, composition: CompositionId): ScenePresetId {
   const v = Math.min(Math.max(Math.round(view), 0), 8)
   if (v === 0) return composition === 'cinematic' ? 'signature' : composition

@@ -1,198 +1,73 @@
 {
   "contentrating": "Everyone",
   "title": "SCHWARZSCHILD",
-  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Directed scene presets, a dedicated custom editor, adaptive depth clock, refined photon-ring detail and disk photosphere.",
+  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Directed scene presets, bold scene-aware clock engines, adaptive depth typography, refined photon-ring detail and disk photosphere.",
   "file": "wallpaper.html",
   "type": "web",
   "tags": ["Space", "Abstract"],
   "general": {
     "properties": {
       "scenemode": {
-        "order": 10,
-        "text": "Scene mode",
-        "type": "combo",
-        "value": "preset",
-        "options": [
-          { "label": "Preset", "value": "preset" },
-          { "label": "Custom", "value": "custom" }
-        ]
+        "order": 10, "text": "Scene mode", "type": "combo", "value": "preset",
+        "options": [{"label":"Preset","value":"preset"},{"label":"Custom","value":"custom"}]
       },
       "scenepreset": {
-        "order": 11,
-        "text": "Scene preset",
-        "type": "combo",
-        "value": "signature",
+        "order": 11, "text": "Scene preset", "type": "combo", "value": "signature",
         "options": [
-          { "label": "Signature", "value": "signature" },
-          { "label": "Horizon", "value": "horizon" },
-          { "label": "Terminal", "value": "terminal" },
-          { "label": "Centered", "value": "centered" },
-          { "label": "Void", "value": "void" },
-          { "label": "Close Pass", "value": "close" },
-          { "label": "Edge-on", "value": "edge" },
-          { "label": "Photon Ring", "value": "ring" },
-          { "label": "Face-on", "value": "face" },
-          { "label": "Near", "value": "near" },
-          { "label": "Silhouette", "value": "silhouette" },
-          { "label": "Wide", "value": "wide" },
-          { "label": "Knife-edge", "value": "knife" },
-          { "label": "Polar", "value": "polar" }
+          {"label":"Signature","value":"signature"},{"label":"Horizon","value":"horizon"},{"label":"Terminal","value":"terminal"},{"label":"Centered","value":"centered"},{"label":"Void","value":"void"},{"label":"Close Pass","value":"close"},{"label":"Edge-on","value":"edge"},{"label":"Photon Ring","value":"ring"},{"label":"Face-on","value":"face"},{"label":"Near","value":"near"},{"label":"Silhouette","value":"silhouette"},{"label":"Wide","value":"wide"},{"label":"Knife-edge","value":"knife"},{"label":"Polar","value":"polar"}
         ]
       },
       "palette": {
-        "order": 20,
-        "text": "Look · Disk palette",
-        "type": "combo",
-        "value": "ember",
-        "options": [
-          { "label": "Crimson (3 100 K)", "value": "crimson" },
-          { "label": "Ember (5 000 K)", "value": "ember" },
-          { "label": "Gold (5 900 K)", "value": "gold" },
-          { "label": "Blue (9 000 K)", "value": "blue" }
-        ]
+        "order": 20, "text": "Look · Disk palette", "type": "combo", "value": "ember",
+        "options": [{"label":"Crimson (3 100 K)","value":"crimson"},{"label":"Ember (5 000 K)","value":"ember"},{"label":"Gold (5 900 K)","value":"gold"},{"label":"Blue (9 000 K)","value":"blue"}]
       },
-      "quality": {
-        "order": 21,
-        "text": "Look · Quality",
-        "type": "combo",
-        "value": "auto",
-        "options": [
-          { "label": "Auto", "value": "auto" },
-          { "label": "Eco", "value": "eco" },
-          { "label": "Max", "value": "max" }
-        ]
-      },
-      "trail": { "order": 22, "text": "Look · Mouse trail", "type": "bool", "value": false },
-      "clock": {
-        "order": 30,
-        "text": "Clock · Mode",
-        "type": "combo",
-        "value": "24",
-        "options": [
-          { "label": "Off", "value": "off" },
-          { "label": "24-hour", "value": "24" },
-          { "label": "12-hour", "value": "12" }
-        ]
-      },
-      "clockfont": {
-        "order": 31,
-        "text": "Clock · Font",
-        "type": "combo",
-        "value": "thin",
-        "options": [
-          { "label": "Mono", "value": "mono" },
-          { "label": "Display", "value": "display" },
-          { "label": "Thin", "value": "thin" }
-        ]
-      },
-      "accent": {
-        "order": 32,
-        "text": "Clock · Accent",
-        "type": "combo",
-        "value": "auto",
-        "options": [
-          { "label": "Auto (disk palette)", "value": "auto" },
-          { "label": "Cyan", "value": "cyan" },
-          { "label": "Warm", "value": "ember" },
-          { "label": "Mono", "value": "mono" }
-        ]
-      },
-      "secondsbar": { "order": 33, "text": "Clock · Minute scale", "type": "bool", "value": true },
-      "seconds": { "order": 34, "text": "Clock · Seconds", "type": "bool", "value": false },
-      "showdate": {
-        "order": 35,
-        "text": "Clock · Date",
-        "type": "combo",
-        "value": "date",
-        "options": [
-          { "label": "Off", "value": "off" },
-          { "label": "Date", "value": "date" },
-          { "label": "Date + DOY + week", "value": "full" }
-        ]
-      },
+      "quality": {"order":21,"text":"Look · Quality","type":"combo","value":"auto","options":[{"label":"Auto","value":"auto"},{"label":"Eco","value":"eco"},{"label":"Max","value":"max"}]},
+      "trail": {"order":22,"text":"Look · Mouse trail","type":"bool","value":false},
+      "clock": {"order":30,"text":"Clock · Mode","type":"combo","value":"24","options":[{"label":"Off","value":"off"},{"label":"24-hour","value":"24"},{"label":"12-hour","value":"12"}]},
+      "clockfont": {"order":31,"text":"Clock · Font","type":"combo","value":"thin","options":[{"label":"Mono","value":"mono"},{"label":"Display","value":"display"},{"label":"Thin","value":"thin"}]},
+      "accent": {"order":32,"text":"Clock · Accent","type":"combo","value":"auto","options":[{"label":"Auto (disk palette)","value":"auto"},{"label":"Cyan","value":"cyan"},{"label":"Warm","value":"ember"},{"label":"Mono","value":"mono"}]},
+      "secondsbar": {"order":33,"text":"Clock · Minute scale / orbit phase","type":"bool","value":true},
+      "seconds": {"order":34,"text":"Clock · Seconds","type":"bool","value":false},
+      "showdate": {"order":35,"text":"Clock · Date","type":"combo","value":"date","options":[{"label":"Off","value":"off"},{"label":"Date","value":"date"},{"label":"Date + DOY + week","value":"full"}]},
       "custombase": {
-        "order": 100,
-        "text": "Custom · Base preset",
-        "type": "combo",
-        "value": "signature",
-        "options": [
-          { "label": "Signature", "value": "signature" },
-          { "label": "Horizon", "value": "horizon" },
-          { "label": "Terminal", "value": "terminal" },
-          { "label": "Centered", "value": "centered" },
-          { "label": "Void", "value": "void" },
-          { "label": "Close Pass", "value": "close" },
-          { "label": "Edge-on", "value": "edge" },
-          { "label": "Photon Ring", "value": "ring" },
-          { "label": "Face-on", "value": "face" },
-          { "label": "Near", "value": "near" },
-          { "label": "Silhouette", "value": "silhouette" },
-          { "label": "Wide", "value": "wide" },
-          { "label": "Knife-edge", "value": "knife" },
-          { "label": "Polar", "value": "polar" }
-        ]
+        "order":100,"text":"Custom · Base preset","type":"combo","value":"signature",
+        "options":[{"label":"Signature","value":"signature"},{"label":"Horizon","value":"horizon"},{"label":"Terminal","value":"terminal"},{"label":"Centered","value":"centered"},{"label":"Void","value":"void"},{"label":"Close Pass","value":"close"},{"label":"Edge-on","value":"edge"},{"label":"Photon Ring","value":"ring"},{"label":"Face-on","value":"face"},{"label":"Near","value":"near"},{"label":"Silhouette","value":"silhouette"},{"label":"Wide","value":"wide"},{"label":"Knife-edge","value":"knife"},{"label":"Polar","value":"polar"}]
       },
-      "customframing": { "order": 101, "text": "Custom · Framing scale", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customshiftx": { "order": 102, "text": "Custom · Shift X", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customshifty": { "order": 103, "text": "Custom · Shift Y", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customroll": { "order": 104, "text": "Custom · Roll", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customtilt": { "order": 105, "text": "Custom · Tilt", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customzoom": { "order": 106, "text": "Custom · Zoom", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customdiskbright": { "order": 110, "text": "Custom · Disk brightness", "type": "slider", "value": 60, "min": 0, "max": 100 },
-      "customdisksize": { "order": 111, "text": "Custom · Disk radius", "type": "slider", "value": 78, "min": 0, "max": 100 },
-      "customturbulence": { "order": 112, "text": "Custom · Turbulence", "type": "slider", "value": 70, "min": 0, "max": 100 },
-      "customspin": { "order": 113, "text": "Custom · Disk rotation", "type": "slider", "value": 45, "min": 0, "max": 100 },
-      "customstars": { "order": 114, "text": "Custom · Star field", "type": "slider", "value": 42, "min": 0, "max": 100 },
-      "customglow": { "order": 115, "text": "Custom · Bloom", "type": "slider", "value": 62, "min": 0, "max": 100 },
-      "customstreak": { "order": 116, "text": "Custom · Directional streak", "type": "slider", "value": 66, "min": 0, "max": 100 },
-      "customexposure": { "order": 117, "text": "Custom · Exposure", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customdrift": { "order": 120, "text": "Custom · Orbit drift", "type": "slider", "value": 46, "min": 0, "max": 100 },
-      "customparallax": { "order": 121, "text": "Custom · Mouse parallax", "type": "slider", "value": 52, "min": 0, "max": 100 },
+      "customframing":{"order":101,"text":"Custom · Framing scale","type":"slider","value":50,"min":0,"max":100},
+      "customshiftx":{"order":102,"text":"Custom · Shift X","type":"slider","value":50,"min":0,"max":100},
+      "customshifty":{"order":103,"text":"Custom · Shift Y","type":"slider","value":50,"min":0,"max":100},
+      "customroll":{"order":104,"text":"Custom · Roll","type":"slider","value":50,"min":0,"max":100},
+      "customtilt":{"order":105,"text":"Custom · Tilt","type":"slider","value":50,"min":0,"max":100},
+      "customzoom":{"order":106,"text":"Custom · Zoom","type":"slider","value":50,"min":0,"max":100},
+      "customdiskbright":{"order":110,"text":"Custom · Disk brightness","type":"slider","value":60,"min":0,"max":100},
+      "customdisksize":{"order":111,"text":"Custom · Disk radius","type":"slider","value":78,"min":0,"max":100},
+      "customturbulence":{"order":112,"text":"Custom · Turbulence","type":"slider","value":70,"min":0,"max":100},
+      "customspin":{"order":113,"text":"Custom · Disk rotation","type":"slider","value":45,"min":0,"max":100},
+      "customstars":{"order":114,"text":"Custom · Star field","type":"slider","value":42,"min":0,"max":100},
+      "customglow":{"order":115,"text":"Custom · Bloom","type":"slider","value":62,"min":0,"max":100},
+      "customstreak":{"order":116,"text":"Custom · Directional streak","type":"slider","value":66,"min":0,"max":100},
+      "customexposure":{"order":117,"text":"Custom · Exposure","type":"slider","value":50,"min":0,"max":100},
+      "customdrift":{"order":120,"text":"Custom · Orbit drift","type":"slider","value":46,"min":0,"max":100},
+      "customparallax":{"order":121,"text":"Custom · Mouse parallax","type":"slider","value":52,"min":0,"max":100},
       "customclockart": {
-        "order": 130,
-        "text": "Custom · Clock art",
-        "type": "combo",
-        "value": "auto",
-        "options": [
-          { "label": "Preset", "value": "auto" },
-          { "label": "Poster", "value": "poster" },
-          { "label": "Horizon", "value": "horizon" },
-          { "label": "Eclipse", "value": "eclipse" },
-          { "label": "Orbit", "value": "orbit" },
-          { "label": "Crop", "value": "crop" },
-          { "label": "Quiet", "value": "quiet" },
-          { "label": "Caption", "value": "caption" },
-          { "label": "Blade", "value": "blade" }
+        "order":130,"text":"Custom · Clock layout engine","type":"combo","value":"auto",
+        "options":[
+          {"label":"Preset","value":"auto"},
+          {"label":"Monument","value":"poster"},
+          {"label":"Eclipse","value":"eclipse"},
+          {"label":"Blade","value":"blade"},
+          {"label":"Orbit","value":"orbit"},
+          {"label":"Depth","value":"crop"},
+          {"label":"Quiet","value":"quiet"},
+          {"label":"Relativistic (experimental)","value":"relativistic"}
         ]
       },
-      "customclockscale": { "order": 131, "text": "Custom · Clock type scale", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customclocknear": { "order": 132, "text": "Custom · Clock proximity", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "customclockdepth": { "order": 133, "text": "Custom · Clock depth overlap", "type": "slider", "value": 50, "min": 0, "max": 100 },
-      "clockadaptive": { "order": 134, "text": "Custom · Adaptive clock layout", "type": "bool", "value": true },
-      "clockpos": {
-        "order": 135,
-        "text": "Custom · Manual clock position",
-        "type": "combo",
-        "value": "bl",
-        "options": [
-          { "label": "Top left", "value": "tl" },
-          { "label": "Top right", "value": "tr" },
-          { "label": "Bottom left", "value": "bl" },
-          { "label": "Bottom center", "value": "bc" },
-          { "label": "Bottom right", "value": "br" }
-        ]
-      },
-      "clocksize": {
-        "order": 136,
-        "text": "Custom · Manual clock size",
-        "type": "combo",
-        "value": "m",
-        "options": [
-          { "label": "Small", "value": "s" },
-          { "label": "Medium", "value": "m" },
-          { "label": "Large", "value": "l" }
-        ]
-      }
+      "customclockscale":{"order":131,"text":"Custom · Clock type scale","type":"slider","value":50,"min":0,"max":100},
+      "customclocknear":{"order":132,"text":"Custom · Clock proximity","type":"slider","value":50,"min":0,"max":100},
+      "customclockdepth":{"order":133,"text":"Custom · Clock depth overlap","type":"slider","value":50,"min":0,"max":100},
+      "clockadaptive":{"order":134,"text":"Custom · Adaptive clock layout","type":"bool","value":true},
+      "clockpos":{"order":135,"text":"Custom · Manual clock position","type":"combo","value":"bl","options":[{"label":"Top left","value":"tl"},{"label":"Top right","value":"tr"},{"label":"Bottom left","value":"bl"},{"label":"Bottom center","value":"bc"},{"label":"Bottom right","value":"br"}]},
+      "clocksize":{"order":136,"text":"Custom · Manual clock size","type":"combo","value":"m","options":[{"label":"Small","value":"s"},{"label":"Medium","value":"m"},{"label":"Large","value":"l"}]}
     }
   }
 }

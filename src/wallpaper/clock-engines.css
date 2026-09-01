@@ -1,0 +1,150 @@
+/* Clock engine layer: typography is composed against live scene geometry. */
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) {
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 0;
+  transform: none !important;
+  text-align: left;
+  overflow: hidden;
+}
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .depth-time {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .t {
+  position: absolute;
+  inset: 0;
+  display: block;
+  font-size: var(--engine-size, var(--clock-auto-size, 64px));
+  line-height: .82;
+}
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .t > span,
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .t > i { position: absolute; }
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .d,
+.wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .sbar { position: absolute; margin: 0; }
+
+/* Monument: oversized digits deliberately crop against the viewport. */
+.wp-clock[data-engine='monument'] .t { font-weight: 210; letter-spacing: -.035em; }
+.wp-clock[data-engine='monument'] .hour {
+  left: var(--monument-hx, 3vw); top: var(--monument-hy, 5vh);
+  transform: translate(-12%, -12%) scaleX(.90);
+}
+.wp-clock[data-engine='monument'] .minute {
+  left: var(--monument-mx, 72vw); top: var(--monument-my, 66vh);
+  transform: translate(-8%, -2%) scaleX(.90);
+}
+.wp-clock[data-engine='monument'] .t i {
+  left: var(--meta-x, 6vw); top: var(--meta-y, 88vh); font-size: .13em; opacity: .72;
+}
+.wp-clock[data-engine='monument'] .d { left: var(--meta-x, 6vw); top: calc(var(--meta-y, 88vh) - 2.1rem); }
+.wp-clock[data-engine='monument'] .sbar { left: var(--meta-x, 6vw); top: calc(var(--meta-y, 88vh) + 1.4rem); width: min(30vw, 360px); }
+
+/* Eclipse: the black-hole shadow becomes the punctuation between HH and MM. */
+.wp-clock[data-engine='eclipse'] .t { font-weight: 205; letter-spacing: .02em; }
+.wp-clock[data-engine='eclipse'] .hour {
+  left: calc(var(--hole-x) - var(--shadow-r) - .22em); top: var(--hole-y);
+  transform: translate(-100%, -47%);
+}
+.wp-clock[data-engine='eclipse'] .minute {
+  left: calc(var(--hole-x) + var(--shadow-r) + .22em); top: var(--hole-y);
+  transform: translate(0, -47%);
+}
+.wp-clock[data-engine='eclipse'] .t i { left: 50%; top: var(--eclipse-meta-y); transform: translateX(-50%); font-size: .13em; }
+.wp-clock[data-engine='eclipse'] .d { left: 50%; top: var(--eclipse-date-y); transform: translateX(-50%); letter-spacing: .46em; }
+.wp-clock[data-engine='eclipse'] .sbar { display: none; }
+
+/* Blade: the typography is aligned to the live projected disk axis. */
+.wp-clock[data-engine='blade'] .depth-time {
+  transform-origin: var(--hole-x) var(--hole-y);
+  transform: rotate(var(--axis-angle));
+}
+.wp-clock[data-engine='blade'] .t { font-weight: 215; font-stretch: 118%; letter-spacing: .08em; }
+.wp-clock[data-engine='blade'] .hour {
+  left: calc(var(--hole-x) - var(--blade-span)); top: calc(var(--hole-y) - .45em);
+  transform: translate(-100%, -50%) scaleX(1.18);
+}
+.wp-clock[data-engine='blade'] .minute {
+  left: calc(var(--hole-x) + var(--blade-span)); top: calc(var(--hole-y) + .45em);
+  transform: translate(0, -50%) scaleX(1.18);
+}
+.wp-clock[data-engine='blade'] .t i { left: calc(var(--hole-x) + var(--blade-span)); top: calc(var(--hole-y) + 1.65em); font-size: .12em; }
+.wp-clock[data-engine='blade'] .d { left: calc(var(--hole-x) - var(--blade-span)); top: calc(var(--hole-y) + 3.2rem); transform: translateX(-100%); }
+.wp-clock[data-engine='blade'] .sbar {
+  left: calc(var(--hole-x) - var(--blade-span)); top: calc(var(--hole-y) + 1px);
+  width: var(--blade-width); height: 1px; transform: translateY(-50%) rotate(var(--axis-angle)); transform-origin: center;
+}
+.wp-clock[data-engine='blade'] .d { transform: translateX(-100%) rotate(var(--axis-angle)); transform-origin: right center; }
+.wp-clock[data-engine='blade'] .sbar::before { opacity: .36; }
+
+/* Orbit: a partial orbital phase replaces the horizontal minute ruler. */
+.wp-clock[data-engine='orbit'] .t { font-weight: 220; }
+.wp-clock[data-engine='orbit'] .hour { left: calc(var(--hole-x) - .22em); top: calc(var(--hole-y) - var(--orbit-r) - .35em); transform: translate(-100%,-50%); }
+.wp-clock[data-engine='orbit'] .minute { left: calc(var(--hole-x) + .22em); top: calc(var(--hole-y) - var(--orbit-r) - .35em); transform: translate(0,-50%); }
+.wp-clock[data-engine='orbit'] .t i { left: var(--hole-x); top: calc(var(--hole-y) + var(--orbit-r) + 1.2rem); transform: translateX(-50%); font-size: .12em; }
+.wp-clock[data-engine='orbit']::before {
+  content: ''; position: absolute; left: calc(var(--hole-x) - var(--orbit-r)); top: calc(var(--hole-y) - var(--orbit-r));
+  width: var(--orbit-d); height: var(--orbit-d); border-radius: 50%;
+  border: 1px solid rgba(232,228,220,.16); border-left-color: transparent; border-bottom-color: transparent;
+  transform: rotate(-28deg); opacity: .82;
+}
+.wp-clock[data-engine='orbit']::after {
+  content: ''; position: absolute; left: var(--orbit-dot-x); top: var(--orbit-dot-y); width: 6px; height: 6px;
+  border-radius: 50%; background: var(--acc); transform: translate(-50%,-50%); box-shadow: 0 0 12px var(--acc),0 0 28px var(--acc);
+}
+.wp-clock[data-engine='orbit'] .sbar { display:none; }
+.wp-clock[data-engine='orbit'][data-bar='off']::before,
+.wp-clock[data-engine='orbit'][data-bar='off']::after { display:none; }
+.wp-clock[data-engine='orbit'] .d { left: var(--hole-x); top: calc(var(--hole-y) + var(--orbit-r) + 2.8rem); transform: translateX(-50%); }
+
+/* Depth: HH and MM become two parallax planes. */
+.wp-clock[data-engine='depth'] .t { font-weight: 220; }
+.wp-clock[data-engine='depth'] .hour {
+  left: var(--depth-hx); top: var(--depth-hy); transform: translate(-50%,-50%) scale(.92);
+  opacity: .64; filter: blur(.22px); text-shadow: 0 0 18px rgba(0,0,0,.72);
+}
+.wp-clock[data-engine='depth'] .minute {
+  left: var(--depth-mx); top: var(--depth-my); transform: translate(-50%,-50%) scale(1.08);
+  opacity: .98; text-shadow: 0 2px 20px rgba(0,0,0,.78), 0 0 34px rgba(0,0,0,.3);
+}
+.wp-clock[data-engine='depth'] .t i { left: var(--depth-mx); top: calc(var(--depth-my) + 1.45em); transform: translateX(-50%); font-size: .12em; }
+.wp-clock[data-engine='depth'] .d { left: var(--depth-mx); top: calc(var(--depth-my) + 3.3rem); transform: translateX(-50%); }
+.wp-clock[data-engine='depth'] .sbar { left: var(--depth-hx); top: calc(var(--depth-hy) + 3.2rem); width: min(24vw,260px); transform: translateX(-50%); opacity:.55; }
+
+/* Relativistic: readable primary type plus annular secondary-image proxies. */
+.wp-clock[data-engine='relativistic'] .t { font-weight: 215; }
+.wp-clock[data-engine='relativistic'] .hour { left: var(--rel-left); top: var(--hole-y); transform: translate(-100%,-50%); }
+.wp-clock[data-engine='relativistic'] .minute { left: var(--rel-right); top: var(--hole-y); transform: translate(0,-50%); }
+.wp-clock[data-engine='relativistic']::before,
+.wp-clock[data-engine='relativistic']::after {
+  content: attr(data-time-text); position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font: 210 var(--engine-size) / .82 var(--font-d); letter-spacing:.14em; white-space:pre;
+  color: rgba(240,241,240,.30); pointer-events:none;
+  -webkit-mask-image: radial-gradient(circle at var(--hole-x) var(--hole-y), transparent 0 var(--rel-in), #000 var(--rel-core) var(--rel-mid), transparent var(--rel-out));
+  mask-image: radial-gradient(circle at var(--hole-x) var(--hole-y), transparent 0 var(--rel-in), #000 var(--rel-core) var(--rel-mid), transparent var(--rel-out));
+  filter: blur(.45px); text-shadow: 0 0 18px var(--acc);
+}
+.wp-clock[data-engine='relativistic']::before { transform: translateY(var(--rel-up)) scaleX(1.18) scaleY(.66); opacity:.50; }
+.wp-clock[data-engine='relativistic']::after { transform: translateY(var(--rel-down)) scaleX(-1.10) scaleY(.60); opacity:.28; }
+.wp-clock[data-engine='relativistic'] .d { left:50%; top:var(--rel-date-y); transform:translateX(-50%); }
+.wp-clock[data-engine='relativistic'] .sbar { display:none; }
+
+/* Quiet intentionally stays closest to the previous adaptive layout. */
+.wp-clock[data-engine='quiet'] { opacity: var(--clock-enter);  }
+.wp-clock[data-engine='quiet'] .t { font-weight: 220; }
+
+@media (max-width:680px) {
+  .wp-clock[data-engine='monument'] .hour { left: 1vw; top: 3vh; }
+  .wp-clock[data-engine='monument'] .minute { left: 62vw; top: 72vh; }
+  .wp-clock[data-engine='blade'] .d { display:none; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .wp-clock[data-engine='relativistic']::before,.wp-clock[data-engine='relativistic']::after { filter:none; }
+}
