@@ -1,14 +1,20 @@
 import {
   OBSERVATION_VIEW_ORDER,
   OBSERVATION_VIEWS,
+  SCENE_PRESETS,
+  curatedPresetFromLegacy,
   isCustomView,
+  isScenePresetId,
+  viewIdFromIndex,
   type CustomViewId,
+  type ScenePresetId,
 } from './presets'
 
 const KEY = 'schwarzschild-wallpaper'
 
 type Stored = {
   sceneMode?: 'preset' | 'custom'
+  scenePreset?: string
   custom?: { view?: CustomViewId; basePreset?: string }
 }
 
@@ -23,6 +29,10 @@ function chooseView(value: CustomViewId) {
   w.wallpaperPropertyListener?.applyUserProperties?.({ customview: { value } })
 }
 
+function presetId(value: unknown): ScenePresetId {
+  return isScenePresetId(value) ? curatedPresetFromLegacy(value) : 'signature'
+}
+
 function tidyPresetCatalog() {
   for (const family of Array.from(document.querySelectorAll<HTMLElement>('.preset-family'))) {
     const grid = family.querySelector<HTMLElement>('.preset-grid')
@@ -34,7 +44,8 @@ function tidyPresetCatalog() {
     }
   }
   for (const label of Array.from(document.querySelectorAll<HTMLElement>('.base-label'))) {
-    if (label.textContent?.includes('base preset')) label.textContent = 'base preset · composition / clock source'
+    if (label.textContent?.includes('base preset'))
+      label.textContent = 'base preset · composition / clock source'
   }
 }
 
@@ -87,6 +98,36 @@ function ensureCustomViewControl(settings: Stored) {
   }
 }
 
+function annotatePreset(settings: Stored) {
+  const id = settings.sceneMode === 'custom'
+    ? presetId(settings.custom?.basePreset)
+    : presetId(settings.scenePreset)
+  const def = SCENE_PRESETS[id]
+  const canonicalId = viewIdFromIndex(def.canonicalView)
+  const canonical = OBSERVATION_VIEWS[canonicalId].label
+  const selected = isCustomView(settings.custom?.view) ? settings.custom!.view! : 'preset'
+
+  for (const note of Array.from(document.querySelectorAll<HTMLElement>('.preset-note'))) {
+    let meta = note.querySelector<HTMLElement>('[data-preset-view-note]')
+    if (!meta) {
+      meta = document.createElement('small')
+      meta.dataset.presetViewNote = '1'
+      const button = note.querySelector('button')
+      if (button) note.insertBefore(meta, button)
+      else note.appendChild(meta)
+    }
+
+    if (settings.sceneMode === 'custom') {
+      const active = selected === 'preset' ? canonical : OBSERVATION_VIEWS[selected].label
+      meta.textContent = selected === 'preset'
+        ? `base view · ${canonical} · inherited`
+        : `base view · ${canonical} · current · ${active}`
+    } else {
+      meta.textContent = `fixed view · ${canonical}`
+    }
+  }
+}
+
 let last = 0
 function tick(now: number) {
   requestAnimationFrame(tick)
@@ -94,6 +135,7 @@ function tick(now: number) {
   last = now
   tidyPresetCatalog()
   const settings = readStored()
+  annotatePreset(settings)
   if (settings.sceneMode === 'custom') ensureCustomViewControl(settings)
 }
 
