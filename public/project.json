@@ -1,7 +1,7 @@
 {
   "contentrating": "Everyone",
   "title": "SCHWARZSCHILD",
-  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Directed scene presets, bold scene-aware clock engines, adaptive depth typography, refined photon-ring detail and disk photosphere.",
+  "description": "A cinematic general-relativistic black-hole wallpaper, ray-traced live on your GPU. Curated immutable scene presets, a separate Custom observation-view workflow, bold scene-aware clock engines, adaptive depth typography, refined photon-ring detail and disk photosphere.",
   "file": "wallpaper.html",
   "type": "web",
   "tags": ["Space", "Abstract"],
@@ -14,7 +14,14 @@
       "scenepreset": {
         "order": 11, "text": "Scene preset", "type": "combo", "value": "signature",
         "options": [
-          {"label":"Signature","value":"signature"},{"label":"Horizon","value":"horizon"},{"label":"Terminal","value":"terminal"},{"label":"Centered","value":"centered"},{"label":"Void","value":"void"},{"label":"Close Pass","value":"close"},{"label":"Edge-on","value":"edge"},{"label":"Photon Ring","value":"ring"},{"label":"Face-on","value":"face"},{"label":"Near","value":"near"},{"label":"Silhouette","value":"silhouette"},{"label":"Wide","value":"wide"},{"label":"Knife-edge","value":"knife"},{"label":"Polar","value":"polar"}
+          {"label":"Signature","value":"signature"},
+          {"label":"Horizon","value":"horizon"},
+          {"label":"Terminal","value":"terminal"},
+          {"label":"Eclipse","value":"centered"},
+          {"label":"Void","value":"void"},
+          {"label":"Close Pass","value":"close"},
+          {"label":"Wide","value":"wide"},
+          {"label":"Orbital","value":"polar"}
         ]
       },
       "palette": {
@@ -29,16 +36,41 @@
       "secondsbar": {"order":33,"text":"Clock · Minute scale / orbit phase","type":"bool","value":true},
       "seconds": {"order":34,"text":"Clock · Seconds","type":"bool","value":false},
       "showdate": {"order":35,"text":"Clock · Date","type":"combo","value":"date","options":[{"label":"Off","value":"off"},{"label":"Date","value":"date"},{"label":"Date + DOY + week","value":"full"}]},
+
       "custombase": {
         "order":100,"text":"Custom · Base preset","type":"combo","value":"signature",
-        "options":[{"label":"Signature","value":"signature"},{"label":"Horizon","value":"horizon"},{"label":"Terminal","value":"terminal"},{"label":"Centered","value":"centered"},{"label":"Void","value":"void"},{"label":"Close Pass","value":"close"},{"label":"Edge-on","value":"edge"},{"label":"Photon Ring","value":"ring"},{"label":"Face-on","value":"face"},{"label":"Near","value":"near"},{"label":"Silhouette","value":"silhouette"},{"label":"Wide","value":"wide"},{"label":"Knife-edge","value":"knife"},{"label":"Polar","value":"polar"}]
+        "options":[
+          {"label":"Signature","value":"signature"},
+          {"label":"Horizon","value":"horizon"},
+          {"label":"Terminal","value":"terminal"},
+          {"label":"Eclipse","value":"centered"},
+          {"label":"Void","value":"void"},
+          {"label":"Close Pass","value":"close"},
+          {"label":"Wide","value":"wide"},
+          {"label":"Orbital","value":"polar"}
+        ]
       },
-      "customframing":{"order":101,"text":"Custom · Framing scale","type":"slider","value":50,"min":0,"max":100},
-      "customshiftx":{"order":102,"text":"Custom · Shift X","type":"slider","value":50,"min":0,"max":100},
-      "customshifty":{"order":103,"text":"Custom · Shift Y","type":"slider","value":50,"min":0,"max":100},
-      "customroll":{"order":104,"text":"Custom · Roll","type":"slider","value":50,"min":0,"max":100},
-      "customtilt":{"order":105,"text":"Custom · Tilt","type":"slider","value":50,"min":0,"max":100},
-      "customzoom":{"order":106,"text":"Custom · Zoom","type":"slider","value":50,"min":0,"max":100},
+      "customview": {
+        "order":101,"text":"Custom · Black-hole view","type":"combo","value":"preset",
+        "options":[
+          {"label":"Preset view","value":"preset"},
+          {"label":"Balanced","value":"balanced"},
+          {"label":"Edge-on","value":"edge"},
+          {"label":"Photon ring","value":"ring"},
+          {"label":"Face-on","value":"face"},
+          {"label":"Near","value":"near"},
+          {"label":"Silhouette","value":"silhouette"},
+          {"label":"Wide","value":"wide"},
+          {"label":"Knife-edge","value":"knife"},
+          {"label":"Polar","value":"polar"}
+        ]
+      },
+      "customframing":{"order":102,"text":"Custom · Framing scale","type":"slider","value":50,"min":0,"max":100},
+      "customshiftx":{"order":103,"text":"Custom · Shift X","type":"slider","value":50,"min":0,"max":100},
+      "customshifty":{"order":104,"text":"Custom · Shift Y","type":"slider","value":50,"min":0,"max":100},
+      "customroll":{"order":105,"text":"Custom · Roll","type":"slider","value":50,"min":0,"max":100},
+      "customtilt":{"order":106,"text":"Custom · Tilt","type":"slider","value":50,"min":0,"max":100},
+      "customzoom":{"order":107,"text":"Custom · Zoom","type":"slider","value":50,"min":0,"max":100},
       "customdiskbright":{"order":110,"text":"Custom · Disk brightness","type":"slider","value":60,"min":0,"max":100},
       "customdisksize":{"order":111,"text":"Custom · Disk radius","type":"slider","value":78,"min":0,"max":100},
       "customturbulence":{"order":112,"text":"Custom · Turbulence","type":"slider","value":70,"min":0,"max":100},
