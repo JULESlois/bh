@@ -1,5 +1,7 @@
 /* Scene-aware clock engines. Every non-quiet engine owns the viewport and is
- * positioned from measured glyph bounds supplied by clock-engine-runtime.ts. */
+ * positioned from measured glyph bounds supplied by clock-engine-runtime.ts.
+ * The solver guarantees legibility first; the preset layer below deliberately
+ * breaks baseline, scale and rotation after that safe placement. */
 .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) {
   inset: 0 !important;
   left: 0 !important;
@@ -34,7 +36,7 @@
 .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .minute {
   left: var(--hour-x);
   top: var(--hour-y);
-  transform: translate(-50%, -50%);
+  transform-origin: center;
 }
 .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .minute {
   left: var(--minute-x);
@@ -43,17 +45,27 @@
 .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .d,
 .wp-clock.adaptive[data-engine]:not([data-engine='quiet']) .sbar { position: absolute; margin: 0; }
 
-/* Monument: the type acts as a frame, but measured safe-area placement keeps
- * both groups visible. Cropping is now subtle rather than accidental. */
+/* Monument: measured safe-area anchors form a typographic frame. A preset may
+ * intentionally let the transformed outline graze the edge, but the complete
+ * HH/MM groups still originate from a safe glyph box. */
 .wp-clock[data-engine='monument'] .t { font-weight: 205; letter-spacing: -.045em; }
 .wp-clock[data-engine='monument'] .hour,
-.wp-clock[data-engine='monument'] .minute { transform: translate(-50%, -50%) scaleX(.91); }
+.wp-clock[data-engine='monument'] .minute {
+  transform:
+    translate(-50%, -50%)
+    translate(var(--art-x, 0), var(--art-y, 0))
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, 1))
+    scaleX(var(--art-xscale, .91));
+}
 .wp-clock[data-engine='monument'] .t i {
-  left: var(--meta-x); top: var(--meta-y); transform: translate(-50%, -50%);
+  left: var(--meta-x); top: var(--meta-y);
+  transform: translate(-50%, -50%) translate(var(--meta-art-x, 0), var(--meta-art-y, 0)) rotate(var(--meta-art-rot, 0deg));
   font-size: .12em; opacity: .72;
 }
 .wp-clock[data-engine='monument'] .d {
-  left: var(--meta-x); top: calc(var(--meta-y) - 1.55rem); transform: translateX(-50%);
+  left: var(--meta-x); top: calc(var(--meta-y) - 1.55rem);
+  transform: translateX(-50%) translate(var(--date-art-x, 0), var(--date-art-y, 0)) rotate(var(--date-art-rot, 0deg));
   max-width: min(42vw, 420px); text-align: center;
 }
 .wp-clock[data-engine='monument'] .sbar {
@@ -61,34 +73,52 @@
   width: min(26vw, 300px);
 }
 
-/* Eclipse: the physical shadow is the punctuation. If one side has too little
- * space, runtime switches the pair to a vertical stack instead of clipping. */
+/* Eclipse: the physical shadow is punctuation. Horizontal and fallback
+ * vertical pairs both receive the same editorial deformation. */
 .wp-clock[data-engine='eclipse'] .t { font-weight: 205; letter-spacing: .015em; }
 .wp-clock[data-engine='eclipse'] .hour,
-.wp-clock[data-engine='eclipse'] .minute { transform: translate(-50%, -50%); }
+.wp-clock[data-engine='eclipse'] .minute {
+  transform:
+    translate(-50%, -50%)
+    translate(var(--art-x, 0), var(--art-y, 0))
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, 1))
+    scaleX(var(--art-xscale, 1));
+}
 .wp-clock[data-engine='eclipse'] .t i {
-  left: var(--meta-x); top: var(--meta-y); transform: translate(-50%, -50%); font-size: .12em;
+  left: var(--meta-x); top: var(--meta-y);
+  transform: translate(-50%, -50%) translate(var(--meta-art-x, 0), var(--meta-art-y, 0));
+  font-size: .12em;
 }
 .wp-clock[data-engine='eclipse'] .d {
-  left: var(--meta-x); top: calc(var(--meta-y) + 1.65rem); transform: translateX(-50%);
+  left: var(--meta-x); top: calc(var(--meta-y) + 1.65rem);
+  transform: translateX(-50%) translate(var(--date-art-x, 0), var(--date-art-y, 0)) rotate(var(--date-art-rot, 0deg));
   letter-spacing: .42em; text-align: center;
 }
 .wp-clock[data-engine='eclipse'] .sbar { display: none; }
 
-/* Blade: HH/MM live on the projected disk axis. The runtime limits separation
- * to the actual distance available before the viewport edge. */
+/* Blade: HH/MM live on the projected disk axis. Each group can then slip away
+ * from that axis slightly, producing controlled tension instead of a ruler. */
 .wp-clock[data-engine='blade'] .t { font-weight: 210; font-stretch: 114%; letter-spacing: .065em; }
 .wp-clock[data-engine='blade'] .hour,
 .wp-clock[data-engine='blade'] .minute {
-  transform: translate(-50%, -50%) rotate(var(--axis-angle)) scaleX(1.12);
+  transform:
+    translate(-50%, -50%)
+    translate(var(--art-x, 0), var(--art-y, 0))
+    rotate(var(--axis-angle))
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, 1))
+    scaleX(var(--art-xscale, 1.12));
 }
 .wp-clock[data-engine='blade'] .t i {
-  left: var(--meta-x); top: var(--meta-y); transform: translate(-50%, -50%) rotate(var(--axis-angle));
+  left: var(--meta-x); top: var(--meta-y);
+  transform: translate(-50%, -50%) translate(var(--meta-art-x, 0), var(--meta-art-y, 0)) rotate(var(--axis-angle));
   font-size: .12em;
 }
 .wp-clock[data-engine='blade'] .d {
   left: var(--meta-x); top: calc(var(--meta-y) + 1.65rem);
-  transform: translate(-50%, -50%) rotate(var(--axis-angle)); transform-origin: center;
+  transform: translate(-50%, -50%) translate(var(--date-art-x, 0), var(--date-art-y, 0)) rotate(var(--axis-angle)) rotate(var(--date-art-rot, 0deg));
+  transform-origin: center;
   max-width: min(35vw, 360px); text-align: center;
 }
 .wp-clock[data-engine='blade'] .sbar {
@@ -97,10 +127,18 @@
 }
 .wp-clock[data-engine='blade'] .sbar::before { opacity: .32; }
 
-/* Orbit: an incomplete orbital phase replaces the horizontal minute ruler. */
+/* Orbit: the phase arc remains geometrically clean while the numerals are free
+ * to behave like labels captured at different moments of the orbit. */
 .wp-clock[data-engine='orbit'] .t { font-weight: 218; }
 .wp-clock[data-engine='orbit'] .hour,
-.wp-clock[data-engine='orbit'] .minute { transform: translate(-50%, -50%); }
+.wp-clock[data-engine='orbit'] .minute {
+  transform:
+    translate(-50%, -50%)
+    translate(var(--art-x, 0), var(--art-y, 0))
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, 1))
+    scaleX(var(--art-xscale, 1));
+}
 .wp-clock[data-engine='orbit']::before {
   content: ''; position: absolute;
   left: calc(var(--hole-x) - var(--orbit-r)); top: calc(var(--hole-y) - var(--orbit-r));
@@ -114,30 +152,48 @@
   transform: translate(-50%,-50%); box-shadow: 0 0 12px var(--acc),0 0 26px var(--acc);
 }
 .wp-clock[data-engine='orbit'] .t i {
-  left: var(--meta-x); top: var(--meta-y); transform: translate(-50%,-50%); font-size:.12em;
+  left: var(--meta-x); top: var(--meta-y);
+  transform: translate(-50%,-50%) translate(var(--meta-art-x, 0), var(--meta-art-y, 0));
+  font-size:.12em;
 }
 .wp-clock[data-engine='orbit'] .d {
-  left: var(--meta-x); top: calc(var(--meta-y) + 1.7rem); transform:translateX(-50%); text-align:center;
+  left: var(--meta-x); top: calc(var(--meta-y) + 1.7rem);
+  transform:translateX(-50%) translate(var(--date-art-x, 0), var(--date-art-y, 0)) rotate(var(--date-art-rot, 0deg)); text-align:center;
 }
 .wp-clock[data-engine='orbit'] .sbar { display:none; }
 .wp-clock[data-engine='orbit'][data-bar='off']::before,
 .wp-clock[data-engine='orbit'][data-bar='off']::after { display:none; }
 
-/* Depth: the two groups occupy separate measured planes. */
+/* Depth: deliberately mismatched size, opacity and perspective distinguish the
+ * far and near time planes. */
 .wp-clock[data-engine='depth'] .t { font-weight: 218; }
 .wp-clock[data-engine='depth'] .hour {
-  transform: translate(-50%,-50%) scale(.92); opacity:.62; filter: blur(.18px);
+  transform:
+    translate(-50%,-50%)
+    translate(var(--art-x, 0), var(--art-y, 0))
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, .92))
+    scaleX(var(--art-xscale, 1));
+  opacity:var(--art-opacity, .62); filter: blur(var(--art-blur, .18px));
   text-shadow: 0 0 18px rgba(0,0,0,.72);
 }
 .wp-clock[data-engine='depth'] .minute {
-  transform: translate(-50%,-50%) scale(1.07); opacity:.98;
+  transform:
+    translate(-50%,-50%)
+    translate(var(--art-x, 0), var(--art-y, 0))
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, 1.07))
+    scaleX(var(--art-xscale, 1));
+  opacity:var(--art-opacity, .98);
   text-shadow: 0 2px 20px rgba(0,0,0,.78),0 0 34px rgba(0,0,0,.28);
 }
 .wp-clock[data-engine='depth'] .t i {
-  left: var(--meta-x); top: var(--meta-y); transform: translate(-50%,-50%); font-size:.12em;
+  left: var(--meta-x); top: var(--meta-y);
+  transform: translate(-50%,-50%) translate(var(--meta-art-x, 0), var(--meta-art-y, 0)); font-size:.12em;
 }
 .wp-clock[data-engine='depth'] .d {
-  left: var(--meta-x); top: calc(var(--meta-y) + 1.65rem); transform:translateX(-50%); text-align:center;
+  left: var(--meta-x); top: calc(var(--meta-y) + 1.65rem);
+  transform:translateX(-50%) translate(var(--date-art-x, 0), var(--date-art-y, 0)) rotate(var(--date-art-rot, 0deg)); text-align:center;
 }
 .wp-clock[data-engine='depth'] .sbar {
   left: var(--meta-x); top: calc(var(--meta-y) + 3rem); width:min(22vw,240px); transform:translateX(-50%); opacity:.48;
@@ -147,7 +203,13 @@
  * annular secondary-image proxies aligned to the physical shadow estimate. */
 .wp-clock[data-engine='relativistic'] .t { font-weight: 212; }
 .wp-clock[data-engine='relativistic'] .hour,
-.wp-clock[data-engine='relativistic'] .minute { transform: translate(-50%,-50%); }
+.wp-clock[data-engine='relativistic'] .minute {
+  transform:
+    translate(-50%,-50%)
+    translate(var(--art-x, 0), var(--art-y, 0))
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, 1));
+}
 .wp-clock[data-engine='relativistic']::before,
 .wp-clock[data-engine='relativistic']::after {
   content: attr(data-time-text); position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -167,13 +229,140 @@
 }
 .wp-clock[data-engine='relativistic'] .sbar { display:none; }
 
+/* -------------------------------------------------------------------------
+ * Expressive preset layer
+ * -------------------------------------------------------------------------
+ * These are not alternate layouts. They are controlled typographic gestures
+ * applied after the safe solver has found viable anchors. This preserves
+ * readability while allowing imbalance, broken baselines and deliberate edge
+ * tension. */
+
+/* Signature — editorial hero: hour dominates, minute recedes and drifts. */
+.wp-clock[data-engine='monument'][data-preset='signature'] .hour {
+  --art-scale: 1.13; --art-xscale: .88; --art-rot: -4.5deg; --art-x: -.05em; --art-y: -.10em;
+}
+.wp-clock[data-engine='monument'][data-preset='signature'] .minute {
+  --art-scale: .84; --art-xscale: .96; --art-rot: 4deg; --art-x: .07em; --art-y: .19em;
+}
+.wp-clock[data-engine='monument'][data-preset='signature'] {
+  --date-art-x: 2.8rem; --date-art-y: -.15rem; --date-art-rot: -2deg;
+  --meta-art-x: -1.6rem; --meta-art-y: .25rem; --meta-art-rot: -5deg;
+}
+
+/* Wide — reverse hierarchy: the minute becomes the visual counterweight. */
+.wp-clock[data-engine='monument'][data-preset='wide'] .hour {
+  --art-scale: .76; --art-xscale: .98; --art-rot: -2deg; --art-y: -.08em;
+}
+.wp-clock[data-engine='monument'][data-preset='wide'] .minute {
+  --art-scale: 1.07; --art-xscale: .90; --art-rot: 2.5deg; --art-y: .08em;
+}
+.wp-clock[data-engine='monument'][data-preset='wide'] {
+  --date-art-x: -1.4rem; --date-art-y: .2rem; --date-art-rot: 1.5deg;
+}
+
+/* Eclipse — the two sides orbit the shadow rather than sharing a baseline. */
+.wp-clock[data-engine='eclipse'][data-preset='ring'] .hour {
+  --art-scale: .82; --art-xscale: .96; --art-rot: -5deg; --art-y: -.18em;
+}
+.wp-clock[data-engine='eclipse'][data-preset='ring'] .minute {
+  --art-scale: 1.12; --art-xscale: .93; --art-rot: 5.5deg; --art-y: .16em;
+}
+.wp-clock[data-engine='eclipse'][data-preset='ring'] {
+  --date-art-x: 1.7rem; --date-art-y: .25rem; --date-art-rot: 2deg;
+  --meta-art-x: -1.2rem; --meta-art-y: -.2rem;
+}
+.wp-clock[data-engine='eclipse'][data-preset='centered'] .hour {
+  --art-scale: .92; --art-rot: -2.5deg; --art-y: -.10em;
+}
+.wp-clock[data-engine='eclipse'][data-preset='centered'] .minute {
+  --art-scale: 1.06; --art-rot: 2deg; --art-y: .10em;
+}
+
+/* Blade — each observation gets a different rhythm along the same physical
+ * disk axis. The offsets are screen-space accents, not geometry errors. */
+.wp-clock[data-engine='blade'][data-preset='horizon'] .hour,
+.wp-clock[data-engine='blade'][data-preset='edge'] .hour {
+  --art-scale: .82; --art-xscale: 1.20; --art-rot: -2deg; --art-y: -.16em;
+}
+.wp-clock[data-engine='blade'][data-preset='horizon'] .minute,
+.wp-clock[data-engine='blade'][data-preset='edge'] .minute {
+  --art-scale: 1.08; --art-xscale: 1.08; --art-rot: 2deg; --art-y: .14em;
+}
+.wp-clock[data-engine='blade'][data-preset='terminal'] .hour {
+  --art-scale: 1.10; --art-xscale: 1.02; --art-rot: 4deg; --art-y: -.12em;
+}
+.wp-clock[data-engine='blade'][data-preset='terminal'] .minute {
+  --art-scale: .76; --art-xscale: 1.24; --art-rot: -4deg; --art-y: .20em;
+}
+.wp-clock[data-engine='blade'][data-preset='knife'] .hour {
+  --art-scale: .74; --art-xscale: 1.30; --art-rot: -3deg; --art-y: -.20em;
+  opacity: .72;
+}
+.wp-clock[data-engine='blade'][data-preset='knife'] .minute {
+  --art-scale: 1.16; --art-xscale: 1.10; --art-rot: 3deg; --art-y: .18em;
+}
+.wp-clock[data-engine='blade'][data-preset='knife'] {
+  --date-art-x: 2.2rem; --date-art-y: -.4rem; --date-art-rot: 2deg;
+  --meta-art-x: -1.3rem; --meta-art-y: .2rem;
+}
+
+/* Orbit — numbers behave like two labels caught at different orbital phases. */
+.wp-clock[data-engine='orbit'][data-preset='face'] .hour {
+  --art-scale: .82; --art-rot: -7deg; --art-x: -.10em; --art-y: -.12em;
+}
+.wp-clock[data-engine='orbit'][data-preset='face'] .minute {
+  --art-scale: 1.08; --art-rot: 4deg; --art-x: .08em; --art-y: .10em;
+}
+.wp-clock[data-engine='orbit'][data-preset='polar'] .hour {
+  --art-scale: 1.04; --art-rot: 6deg; --art-x: -.06em; --art-y: .08em;
+}
+.wp-clock[data-engine='orbit'][data-preset='polar'] .minute {
+  --art-scale: .82; --art-xscale: 1.08; --art-rot: -4deg; --art-x: .08em; --art-y: -.10em;
+}
+.wp-clock[data-engine='orbit'][data-preset='polar'] {
+  --date-art-x: 1.8rem; --date-art-y: -.15rem; --date-art-rot: -2deg;
+}
+
+/* Depth — intentionally unequal planes: far hour loses mass, near minute gains
+ * scale and clarity. */
+.wp-clock[data-engine='depth'][data-preset='close'] .hour {
+  --art-scale: .76; --art-xscale: 1.08; --art-rot: -4deg; --art-x: -.08em; --art-y: -.10em;
+  --art-opacity: .50; --art-blur: .30px;
+}
+.wp-clock[data-engine='depth'][data-preset='close'] .minute {
+  --art-scale: 1.16; --art-xscale: .96; --art-rot: 3deg; --art-x: .08em; --art-y: .14em;
+}
+.wp-clock[data-engine='depth'][data-preset='near'] .hour {
+  --art-scale: .70; --art-xscale: 1.12; --art-rot: -6deg; --art-x: -.10em; --art-y: -.16em;
+  --art-opacity: .42; --art-blur: .38px;
+}
+.wp-clock[data-engine='depth'][data-preset='near'] .minute {
+  --art-scale: 1.20; --art-xscale: .94; --art-rot: 4deg; --art-x: .10em; --art-y: .16em;
+}
+.wp-clock[data-engine='depth'][data-preset='near'] {
+  --date-art-x: 2.4rem; --date-art-y: -.25rem; --date-art-rot: 2.5deg;
+  --meta-art-x: -1.1rem; --meta-art-y: .3rem;
+}
+
 /* Quiet intentionally keeps the restrained legacy adaptive composition. */
 .wp-clock[data-engine='quiet'] { opacity:var(--clock-enter); }
 .wp-clock[data-engine='quiet'] .t { font-weight:220; }
 
+/* Fallback vertical Eclipse pairs should stay expressive, but not read as two
+ * unrelated labels. Tighten the gesture when the viewport forces a stack. */
+.wp-clock[data-engine='eclipse'][data-pair='vertical'] .hour,
+.wp-clock[data-engine='eclipse'][data-pair='vertical'] .minute {
+  --art-x: 0;
+  --art-rot: 0deg;
+}
+.wp-clock[data-engine='eclipse'][data-pair='vertical'] .hour { --art-y: -.04em; }
+.wp-clock[data-engine='eclipse'][data-pair='vertical'] .minute { --art-y: .04em; }
+
 @media (max-width:680px) {
   .wp-clock[data-engine='blade'] .d { display:none; }
   .wp-clock[data-engine='monument'] .d { max-width:56vw; }
+  .wp-clock[data-engine='monument'] .hour,
+  .wp-clock[data-engine='monument'] .minute { --art-scale: 1.02; }
 }
 @media (prefers-reduced-motion:reduce) {
   .wp-clock[data-engine='relativistic']::before,
