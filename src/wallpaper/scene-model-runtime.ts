@@ -108,13 +108,20 @@ function annotatePreset(settings: Stored) {
   const selected = isCustomView(settings.custom?.view) ? settings.custom!.view! : 'preset'
 
   for (const note of Array.from(document.querySelectorAll<HTMLElement>('.preset-note'))) {
-    let meta = note.querySelector<HTMLElement>('[data-preset-view-note]')
+    const description = note.querySelector<HTMLElement>(':scope > span')
+    if (!description) continue
+    let meta = description.querySelector<HTMLElement>('[data-preset-view-note]')
     if (!meta) {
-      meta = document.createElement('small')
+      meta = document.createElement('em')
       meta.dataset.presetViewNote = '1'
-      const button = note.querySelector('button')
-      if (button) note.insertBefore(meta, button)
-      else note.appendChild(meta)
+      meta.style.display = 'block'
+      meta.style.marginTop = '3px'
+      meta.style.fontStyle = 'normal'
+      meta.style.fontSize = '7px'
+      meta.style.letterSpacing = '.18em'
+      meta.style.textTransform = 'uppercase'
+      meta.style.color = 'rgba(232,228,220,.28)'
+      description.appendChild(meta)
     }
 
     if (settings.sceneMode === 'custom') {
