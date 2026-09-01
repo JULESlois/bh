@@ -1,0 +1,66 @@
+/* Orbit composition correction.
+ * Large centered shadows use their dark interior as negative space. The two
+ * time groups intentionally occupy different quadrants instead of sharing the
+ * bright top edge; date and seconds get independent anchors. */
+.wp-clock[data-engine='orbit'] .t i {
+  left: var(--seconds-x, var(--meta-x));
+  top: var(--seconds-y, var(--meta-y));
+  transform: translate(-50%, -50%);
+  font-size: .105em;
+  letter-spacing: .16em;
+  opacity: .60;
+}
+
+.wp-clock[data-engine='orbit'] .d {
+  left: var(--meta-x);
+  top: var(--meta-y);
+  transform: translate(-50%, -50%)
+    translate(var(--date-art-x, 0), var(--date-art-y, 0))
+    rotate(var(--date-art-rot, 0deg));
+  text-align: center;
+  letter-spacing: .30em;
+  opacity: .70;
+  white-space: nowrap;
+}
+
+.wp-clock[data-engine='orbit']::before {
+  border-color: rgba(232,228,220,.12);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  opacity: .72;
+}
+.wp-clock[data-engine='orbit']::after {
+  width: 4px;
+  height: 4px;
+  box-shadow: 0 0 9px var(--acc), 0 0 20px var(--acc);
+}
+
+.wp-clock[data-engine='orbit'][data-orbit-layout='interior'] .hour,
+.wp-clock[data-engine='orbit'][data-orbit-layout='interior'] .minute {
+  color: rgba(244,244,241,.96);
+  text-shadow: 0 2px 18px rgba(0,0,0,.38), 0 0 28px rgba(0,0,0,.18);
+}
+.wp-clock[data-engine='orbit'][data-orbit-layout='interior'] .d,
+.wp-clock[data-engine='orbit'][data-orbit-layout='interior'] .t i {
+  color: rgba(235,234,229,.74);
+}
+
+/* Geometry-expression is useful around the disk, but inside the shadow it was
+ * creating an extra competing motion layer. Keep the preset's intentional
+ * asymmetry while neutralising only the per-frame deformation field. */
+.wp-clock[data-engine='orbit'][data-orbit-layout='interior'] .hour,
+.wp-clock[data-engine='orbit'][data-orbit-layout='interior'] .minute {
+  translate: 0 0;
+  rotate: 0deg;
+  scale: 1 1;
+  letter-spacing: normal;
+  font-weight: inherit;
+}
+
+.wp-clock[data-engine='orbit'][data-orbit-layout='exterior'] .d {
+  opacity: .62;
+}
+
+@media (max-width: 680px) {
+  .wp-clock[data-engine='orbit'] .d { letter-spacing: .20em; }
+}
