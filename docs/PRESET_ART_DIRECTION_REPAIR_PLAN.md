@@ -1,5 +1,15 @@
 # Preset art-direction repair plan
 
+## Progress
+
+- [x] Stage 1 — curated presets own explicit look/motion instead of inheriting Custom defaults.
+- [x] Stage 2 — material/light corrections from `VIEW_DIRECTORS` are now Custom-only; curated presets use them only for camera-family framing/shift/roll.
+- [x] Stage 3 — eight distinct renderer theses are encoded and live in the wallpaper render path.
+- [x] Clock geometry/expression runtimes now consume the same preset drift/parallax/breath model as the renderer.
+- [ ] Stage 4 — refine the final pair orientation and per-scene typography after visual screenshot review.
+- [ ] Validation — capture all eight scenes without the clock at multiple aspect ratios and tune out remaining similarity.
+- [ ] Custom handoff — make “customize this preset” seed Custom sliders from the curated look so entering Custom does not visually jump to neutral defaults.
+
 ## Problem
 
 The wallpaper currently exposes eight curated presets, but most of their identity still comes from camera/view selection and clock placement. Preset rendering inherits the same `CUSTOM_SCENE_DEFAULTS`, while `VIEW_DIRECTORS` applies mostly modest modifiers. As a result, the presets read as related parameter snapshots rather than eight finished artworks, and the demo site can feel more expressive because its timeline creates distinct visual events: disk suppression, star-heavy lensing, redshift emphasis, macro material, and environmental scale.
