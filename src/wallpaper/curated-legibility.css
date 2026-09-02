@@ -20,9 +20,9 @@
   font-weight: var(--geo-weight, 210);
 }
 
-/* Date position is no longer derived from the seconds/meta anchor. This rule
- * intentionally overrides engine-specific date offsets and rotations around the
- * disk. The runtime solves --date-x/y from the final visible HH/MM bounds. */
+/* Date position is no longer derived from the seconds/meta anchor. The runtime
+ * solves a stable slot from the final HH/MM bounds and penalizes the bright disk
+ * axis / photon-ring band even when those regions do not literally intersect. */
 .wp-clock[data-curated='on'][data-date-fit='placed'] .d {
   position: absolute !important;
   left: var(--date-x) !important;
@@ -32,6 +32,10 @@
     translate(-50%, -50%)
     rotate(var(--date-art-rot, 0deg)) !important;
   transform-origin: center !important;
+  transition:
+    left .26s cubic-bezier(.22,.61,.36,1),
+    top .26s cubic-bezier(.22,.61,.36,1),
+    opacity .18s linear;
 }
 
 /* On an exceptionally cramped viewport it is preferable to omit the secondary
@@ -41,7 +45,7 @@
 }
 
 /* Eclipse keeps the shadow-as-punctuation idea, but the date is now free to
- * leave the shadow if the HH/MM pair or seconds consume that space. */
+ * leave the shadow if the HH/MM pair, seconds, or the bright ring consume it. */
 .wp-clock[data-curated-blueprint='shadow-punctuation'][data-date-fit='placed'] .d {
   left: var(--date-x) !important;
   top: var(--date-y) !important;
@@ -51,5 +55,8 @@
   .wp-clock[data-curated='on'][data-parallel-time='on'] .hour,
   .wp-clock[data-curated='on'][data-parallel-time='on'] .minute {
     --parallel-rot: 0deg !important;
+  }
+  .wp-clock[data-curated='on'][data-date-fit='placed'] .d {
+    transition-duration: .18s;
   }
 }
