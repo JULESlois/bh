@@ -65,6 +65,7 @@ function resolve(s: Stored) {
     : validPreset(s.scenePreset) ? s.scenePreset : 'signature'
   const preset = SCENE_PRESETS[presetId]
   const comp = COMPOSITIONS[preset.composition]
+  const director = VIEW_DIRECTORS[preset.view]
   const framing = custom ? .72 + n(c.framing, .5) * .56 : 1
   const shiftX = custom ? (n(c.shiftX, .5) - .5) * .70 : 0
   const shiftY = custom ? (n(c.shiftY, .5) - .5) * .60 : 0
@@ -87,8 +88,11 @@ function resolve(s: Stored) {
     },
     tilt: custom ? n(c.tilt, .5) : .5,
     zoom: custom ? n(c.zoom, .5) : .5,
-    drift: custom ? n(c.drift, .46) : .46,
-    parallax: custom ? n(c.parallax, .52) : .52,
+    azimRate: custom
+      ? (.006 + n(c.drift, .46) * .03) * director.motion
+      : .006 + preset.motion.drift * .03,
+    parallax: custom ? n(c.parallax, .52) : preset.motion.parallax,
+    breath: custom ? .5 : .5 * preset.motion.breath,
   }
 }
 
@@ -204,7 +208,7 @@ function pairAroundShadow(
   }
 }
 
-let ptxT = 0, ptyT = 0, ptx = 0, pty = 0, azim = .6
+let ptxT = 0, ptyT = 0, ptx = 0, pty = 0, azim = .6, clock = 0
 let last = performance.now(), lastRead = 0
 let stored: Stored = readStored()
 
@@ -216,6 +220,7 @@ window.addEventListener('mousemove', (e) => {
 function tick(now: number) {
   requestAnimationFrame(tick)
   const dt = Math.min(now - last, 50); last = now
+  clock += dt / 1000
   if (now - lastRead > 120) { stored = readStored(); lastRead = now; addExperimentalOption(stored) }
   const node = document.querySelector<HTMLElement>('.wp-clock')
   if (!node || stored.clock === 'off') return
@@ -226,10 +231,10 @@ function tick(now: number) {
   const safe = clamp(shortEdge * .035, 18, 54)
   const damp = 1 - Math.exp(-dt / 1000 * 3.2)
   ptx += (ptxT - ptx) * damp; pty += (ptyT - pty) * damp
-  azim += dt / 1000 * (.006 + R.drift * .03) * V.motion
+  azim += dt / 1000 * R.azimRate
 
   const dist = P.dist * R.composition.dist * V.framing * (1.35 - .7 * R.zoom)
-  const incl = clamp(P.incl + (R.tilt - .5) * 20 + pty * 2.6 * R.parallax, 12, 89.8)
+  const incl = clamp(P.incl + (R.tilt - .5) * 20 + Math.sin(clock * .18) * R.breath + pty * 2.6 * R.parallax, 12, 89.8)
   const cam = cameraFrom(dist, incl, azim + ptx * .07 * R.parallax, P.fov)
   const roll = (R.composition.roll + V.roll) * (portrait ? .72 : 1)
   const basis = rollBasis(cam.right as V3, cam.up as V3, roll)
