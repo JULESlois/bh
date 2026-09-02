@@ -139,6 +139,8 @@ function resolveScene(s: WpSettings) {
   const controls = isCustom ? s.custom : CUSTOM_SCENE_DEFAULTS
   const presetId = isCustom ? controls.basePreset : s.scenePreset
   const preset = SCENE_PRESETS[presetId]
+  const view = preset.view
+  const director = VIEW_DIRECTORS[view]
   const baseComposition = COMPOSITIONS[preset.composition]
 
   const framingMul = isCustom ? 0.72 + controls.framing * 0.56 : 1
@@ -158,17 +160,49 @@ function resolveScene(s: WpSettings) {
       }
     : baseArt
 
+  // Curated presets own a complete renderer treatment. Custom deliberately
+  // keeps the previous slider semantics and observation-view correction layer.
+  const look = isCustom
+    ? {
+        disk: (0.4 + 1.2 * controls.diskBright) * director.disk,
+        stars: (0.25 + 1.5 * controls.stars) * director.star,
+        exposure: (0.6 + 0.8 * controls.expo) * director.expo,
+        temp: director.temp,
+        diskOut: clamp((14 + 18 * controls.diskSize) * director.diskOut, 12, 34),
+        turb: clamp(controls.turb * director.turb, 0, 1),
+        glow: clamp(controls.glow * director.glow, 0, 1.25),
+        streak: clamp(controls.streak * director.streak, 0, 1.4),
+        falseColor: 0,
+      }
+    : preset.look
+
+  const motion = isCustom
+    ? {
+        azimRate: (0.006 + controls.drift * 0.03) * director.motion,
+        spin: controls.spin,
+        parallax: controls.parallax,
+        breath: 0.5,
+      }
+    : {
+        azimRate: 0.006 + preset.motion.drift * 0.03,
+        spin: preset.motion.spin,
+        parallax: preset.motion.parallax,
+        breath: 0.5 * preset.motion.breath,
+      }
+
   return {
     isCustom,
     controls,
     presetId,
     preset,
-    view: preset.view,
+    view,
     composition: {
       dist: baseComposition.dist * framingMul,
       shift: [baseComposition.shift[0] + shiftX, baseComposition.shift[1] + shiftY] as [number, number],
       roll: baseComposition.roll + roll,
     },
+    look,
+    motion,
     art,
     clockAdaptive: isCustom ? s.clockAdaptive : true,
   }
@@ -257,17 +291,18 @@ export default function Wallpaper() {
       dist: initialP.dist,
       incl: initialP.incl,
       fov: initialP.fov,
-      expo: initialP.expo * initialV.expo,
-      disk: initialP.disk * initialV.disk,
-      star: initialP.star * initialV.star,
+      expo: initialP.expo * initial.look.exposure,
+      disk: initialP.disk * initial.look.disk,
+      star: initialP.star * initial.look.stars,
       shiftX: initial.composition.shift[0] + initialV.shift[0],
       shiftY: initial.composition.shift[1] + initialV.shift[1],
       roll: initial.composition.roll + initialV.roll,
-      temp: (PALETTES[sRef.current.palette] ?? 1) * initialV.temp,
-      dout: (14 + 18 * initial.controls.diskSize) * initialV.diskOut,
-      turbV: clamp(initial.controls.turb * initialV.turb, 0, 1),
-      glowV: clamp(initial.controls.glow * initialV.glow, 0, 1.25),
-      streakV: clamp(initial.controls.streak * initialV.streak, 0, 1.4),
+      temp: (PALETTES[sRef.current.palette] ?? 1) * initial.look.temp,
+      dout: initial.look.diskOut,
+      turbV: initial.look.turb,
+      glowV: initial.look.glow,
+      streakV: initial.look.streak,
+      falseColor: initial.look.falseColor,
       diskClock: 0,
       clockX: window.innerWidth * 0.18,
       clockY: window.innerHeight * 0.82,
@@ -314,6 +349,8 @@ export default function Wallpaper() {
       const A = R.art
       const C = R.composition
       const ctl = R.controls
+      const L = R.look
+      const M = R.motion
 
       if (R.presetId !== st.activePreset) {
         st.activePreset = R.presetId
@@ -330,23 +367,24 @@ export default function Wallpaper() {
       const sceneRate = st.transitionT < 1 ? 1.45 : 2.2
       const k = 1 - Math.exp((-dt / 1000) * sceneRate)
 
-      st.azim += (dt / 1000) * (0.006 + ctl.drift * 0.03) * V.motion
-      st.dist += (P.dist * C.dist * V.framing * (1.35 - 0.7 * ctl.zoom) - st.dist) * k
-      st.incl += (P.incl + (ctl.tilt - 0.5) * 20 - st.incl) * k
+      st.azim += (dt / 1000) * M.azimRate
+      st.dist += (P.dist * C.dist * V.framing * (R.isCustom ? 1.35 - 0.7 * ctl.zoom : 1) - st.dist) * k
+      st.incl += (P.incl + (R.isCustom ? (ctl.tilt - 0.5) * 20 : 0) - st.incl) * k
       st.fov += (P.fov - st.fov) * k
-      st.expo += (P.expo * (0.6 + 0.8 * ctl.expo) * V.expo - st.expo) * k
-      st.disk += (P.disk * (0.4 + 1.2 * ctl.diskBright) * V.disk - st.disk) * k
-      st.star += (P.star * V.star - st.star) * k
+      st.expo += (P.expo * L.exposure - st.expo) * k
+      st.disk += (P.disk * L.disk - st.disk) * k
+      st.star += (P.star * L.stars - st.star) * k
       st.shiftX += ((C.shift[0] + V.shift[0]) * compScale - st.shiftX) * k
       st.shiftY += ((C.shift[1] + V.shift[1]) * compScale - st.shiftY) * k
       st.roll += ((C.roll + V.roll) * (portrait ? 0.72 : 1) - st.roll) * k
-      st.temp += ((PALETTES[set.palette] ?? 1) * V.temp - st.temp) * k
-      st.dout += (clamp((14 + 18 * ctl.diskSize) * V.diskOut, 12, 34) - st.dout) * k
-      st.turbV += (clamp(ctl.turb * V.turb, 0, 1) - st.turbV) * k
-      st.glowV += (clamp(ctl.glow * V.glow, 0, 1.25) - st.glowV) * k
-      st.streakV += (clamp(ctl.streak * V.streak, 0, 1.4) - st.streakV) * k
+      st.temp += ((PALETTES[set.palette] ?? 1) * L.temp - st.temp) * k
+      st.dout += (L.diskOut - st.dout) * k
+      st.turbV += (L.turb - st.turbV) * k
+      st.glowV += (L.glow - st.glowV) * k
+      st.streakV += (L.streak - st.streakV) * k
+      st.falseColor += (L.falseColor - st.falseColor) * k
 
-      st.diskClock += (dt / 1000) * TIME_SCALE * (ctl.spin * 2.2)
+      st.diskClock += (dt / 1000) * TIME_SCALE * (M.spin * 2.2)
       const damp = 1 - Math.exp((-dt / 1000) * 3.2)
       st.ptx += (st.ptxT - st.ptx) * damp
       st.pty += (st.ptyT - st.pty) * damp
@@ -362,9 +400,9 @@ export default function Wallpaper() {
       const rollTransient = T.rollKick * pulse * (1 - te)
       const clockReveal = 0.56 + 0.44 * smooth01((tp - T.clockDelay) / Math.max(1 - T.clockDelay, 1e-4))
 
-      const breath = Math.sin(st.clock * 0.18) * 0.5
-      const incl = clamp(st.incl + breath + st.pty * 2.6 * ctl.parallax, 12, 89.8)
-      const azim = st.azim + st.ptx * 0.07 * ctl.parallax
+      const breath = Math.sin(st.clock * 0.18) * M.breath
+      const incl = clamp(st.incl + breath + st.pty * 2.6 * M.parallax, 12, 89.8)
+      const azim = st.azim + st.ptx * 0.07 * M.parallax
       const cam = cameraFrom(st.dist, incl, azim, st.fov)
       const basis = rollBasis(cam.right as V3, cam.up as V3, st.roll + rollTransient)
 
@@ -384,8 +422,8 @@ export default function Wallpaper() {
       const align = Math.max(0, cam.fwd[0] * compDir[0] + cam.fwd[1] * compDir[1] + cam.fwd[2] * compDir[2])
       const lensPulse = 0.042 * Math.pow(align, 1050)
       const lensShift: [number, number] = [
-        st.shiftX + st.ptx * 0.024 * ctl.parallax,
-        st.shiftY - st.pty * 0.018 * ctl.parallax,
+        st.shiftX + st.ptx * 0.024 * M.parallax,
+        st.shiftY - st.pty * 0.018 * M.parallax,
       ]
 
       if (set.quality === 'auto') renderer.adapt(dt)
@@ -399,8 +437,8 @@ export default function Wallpaper() {
         time: st.diskClock,
         wallTime: st.clock,
         diskGain: st.disk * diskReveal,
-        starGain: (0.25 + 1.5 * ctl.stars) * st.star * starReveal,
-        falseColor: 0,
+        starGain: st.star * starReveal,
+        falseColor: st.falseColor,
         exposure: st.expo * transitionExposure * (1 + lensPulse),
         markPhoton: 0,
         markIsco: 0,
