@@ -33,9 +33,10 @@ export const CAMERA_PRESETS = [
 ] as const
 
 /**
- * Visual development layered on top of the physical camera. Values are kept
- * modest so Custom still reads as the chosen observation view rather than a
- * completely different renderer.
+ * Observation-family corrections. In curated Preset mode these values remain
+ * responsible for camera framing/shift/roll only. Their material/light fields
+ * are retained for Custom, where changing observation view should remain a
+ * continuous and predictable operation.
  */
 export const VIEW_DIRECTORS = [
   { framing: 0.98, shift: [0.01, 0.00], roll: -0.8, disk: 1.00, star: 0.94, glow: 0.96, streak: 0.86, expo: 0.97, turb: 0.94, diskOut: 1.00, temp: 1.00, motion: 0.76 },
@@ -114,6 +115,63 @@ export const isCustomView = (v: unknown): v is CustomViewId => v === 'preset' ||
 export const viewIdFromIndex = (view: number): ObservationViewId =>
   OBSERVATION_VIEW_ORDER[Math.min(Math.max(Math.round(view), 0), 8)]
 
+export type SceneLook = Readonly<{
+  /** Multipliers against the physical camera family's base values. */
+  disk: number
+  stars: number
+  exposure: number
+  temp: number
+  /** Direct renderer-space art-direction values. */
+  diskOut: number
+  turb: number
+  glow: number
+  streak: number
+  falseColor: number
+}>
+
+export type SceneMotion = Readonly<{
+  /** Normalized controls consumed by the wallpaper loop. */
+  drift: number
+  spin: number
+  parallax: number
+  breath: number
+}>
+
+const LEGACY_LOOK: SceneLook = {
+  disk: 1,
+  stars: 1,
+  exposure: 1,
+  temp: 1,
+  diskOut: 26,
+  turb: 0.65,
+  glow: 0.55,
+  streak: 0.30,
+  falseColor: 0,
+}
+const LEGACY_MOTION: SceneMotion = { drift: 0.35, spin: 0.45, parallax: 0.42, breath: 0.55 }
+
+const CURATED_LOOK = {
+  signature: { disk: 1.05, stars: 0.78, exposure: 0.98, temp: 1.00, diskOut: 26.0, turb: 0.56, glow: 0.52, streak: 0.22, falseColor: 0.00 },
+  horizon:   { disk: 1.18, stars: 0.42, exposure: 0.92, temp: 1.02, diskOut: 21.0, turb: 0.36, glow: 0.58, streak: 1.12, falseColor: 0.04 },
+  terminal:  { disk: 1.34, stars: 0.22, exposure: 0.82, temp: 1.06, diskOut: 18.5, turb: 0.42, glow: 0.72, streak: 1.34, falseColor: 0.46 },
+  centered:  { disk: 0.22, stars: 0.20, exposure: 0.82, temp: 1.03, diskOut: 16.0, turb: 0.18, glow: 0.62, streak: 0.02, falseColor: 0.00 },
+  void:      { disk: 0.05, stars: 1.35, exposure: 0.86, temp: 0.97, diskOut: 17.0, turb: 0.12, glow: 0.12, streak: 0.00, falseColor: 0.00 },
+  close:     { disk: 1.42, stars: 0.28, exposure: 0.88, temp: 1.03, diskOut: 27.0, turb: 0.95, glow: 0.50, streak: 0.28, falseColor: 0.12 },
+  wide:      { disk: 0.62, stars: 1.15, exposure: 0.92, temp: 0.99, diskOut: 31.0, turb: 0.42, glow: 0.24, streak: 0.10, falseColor: 0.00 },
+  polar:     { disk: 0.86, stars: 0.52, exposure: 0.94, temp: 1.00, diskOut: 24.0, turb: 0.28, glow: 0.28, streak: 0.00, falseColor: 0.00 },
+} as const satisfies Record<'signature' | 'horizon' | 'terminal' | 'centered' | 'void' | 'close' | 'wide' | 'polar', SceneLook>
+
+const CURATED_MOTION = {
+  signature: { drift: 0.40, spin: 0.42, parallax: 0.48, breath: 0.55 },
+  horizon:   { drift: 0.16, spin: 0.36, parallax: 0.22, breath: 0.18 },
+  terminal:  { drift: 0.10, spin: 0.72, parallax: 0.14, breath: 0.08 },
+  centered:  { drift: 0.06, spin: 0.16, parallax: 0.12, breath: 0.05 },
+  void:      { drift: 0.12, spin: 0.12, parallax: 0.18, breath: 0.08 },
+  close:     { drift: 0.20, spin: 0.82, parallax: 0.34, breath: 0.32 },
+  wide:      { drift: 0.26, spin: 0.30, parallax: 0.38, breath: 0.24 },
+  polar:     { drift: 0.18, spin: 0.22, parallax: 0.20, breath: 0.12 },
+} as const satisfies Record<'signature' | 'horizon' | 'terminal' | 'centered' | 'void' | 'close' | 'wide' | 'polar', SceneMotion>
+
 /*
  * Temporary compatibility bridge: the render/clock callers currently read
  * preset.view directly. Preset mode always receives the canonical value; only
@@ -164,6 +222,8 @@ export interface ScenePresetDefinition {
   readonly view: number
   composition: CompositionId
   clockArt: ClockArtName
+  look: SceneLook
+  motion: SceneMotion
 }
 
 function scene(
@@ -175,6 +235,8 @@ function scene(
   canonicalView: number,
   composition: CompositionId,
   clockArt: ClockArtName,
+  look: SceneLook = LEGACY_LOOK,
+  motion: SceneMotion = LEGACY_MOTION,
 ): ScenePresetDefinition {
   return {
     id,
@@ -185,20 +247,23 @@ function scene(
     canonicalView,
     composition,
     clockArt,
+    look,
+    motion,
     get view() { return effectiveView(id, canonicalView) },
   }
 }
 
 export const SCENE_PRESETS: Record<ScenePresetId, ScenePresetDefinition> = {
-  // Eight finished scenes exposed to users.
-  signature: scene('signature', 'Signature', 'hero', 'Off-axis hero framing with restrained optical energy.', 'framing', 0, 'cinematic', 'poster'),
-  horizon: scene('horizon', 'Horizon', 'low plane', 'Edge-on disk held low in frame with a long, quiet horizon.', 'framing', 1, 'horizon', 'horizon'),
-  terminal: scene('terminal', 'Terminal', 'diagonal', 'Knife-edge disk, compressed field and a deliberately tense diagonal.', 'framing', 7, 'terminal', 'blade'),
-  centered: scene('centered', 'Eclipse', 'lensed', 'Photon-ring portrait with the outer disk suppressed around a formal shadow.', 'framing', 2, 'centered', 'eclipse'),
-  void: scene('void', 'Void', 'negative', 'Silhouette, lensed sky and deliberate emptiness instead of a luminous disk.', 'framing', 5, 'void', 'quiet'),
-  close: scene('close', 'Close Pass', 'material', 'Near-disk material study with enough negative space for layered type.', 'framing', 4, 'close', 'crop'),
-  wide: scene('wide', 'Wide', 'scale', 'Environmental scale with a small subject and visible stellar structure.', 'framing', 6, 'wide', 'caption'),
-  polar: scene('polar', 'Orbital', 'circular', 'Pulled-back polar geometry with typography living inside the shadow.', 'framing', 8, 'orbital', 'orbit'),
+  // Eight finished scenes exposed to users. Their renderer treatment is fixed
+  // here instead of being inherited from Custom's neutral slider defaults.
+  signature: scene('signature', 'Signature', 'hero poster', 'Complete hero image: clean ring, restrained environment and a balanced luminous disk.', 'framing', 0, 'cinematic', 'poster', CURATED_LOOK.signature, CURATED_MOTION.signature),
+  horizon: scene('horizon', 'Horizon', 'light blade', 'A nearly edge-on luminous blade with a quiet field and long directional energy.', 'framing', 1, 'horizon', 'horizon', CURATED_LOOK.horizon, CURATED_MOTION.horizon),
+  terminal: scene('terminal', 'Terminal', 'doppler violence', 'Knife-edge asymmetry, compressed environment and selective redshift treatment.', 'framing', 7, 'terminal', 'blade', CURATED_LOOK.terminal, CURATED_MOTION.terminal),
+  centered: scene('centered', 'Eclipse', 'shadow study', 'The disk retreats so the shadow and higher-order photon structure become the composition.', 'framing', 2, 'centered', 'eclipse', CURATED_LOOK.centered, CURATED_MOTION.centered),
+  void: scene('void', 'Void', 'gravitational sky', 'Almost no disk: stellar structure and lensing carry the image through deliberate darkness.', 'framing', 5, 'void', 'quiet', CURATED_LOOK.void, CURATED_MOTION.void),
+  close: scene('close', 'Close Pass', 'material macro', 'A turbulent, fast-rotating near-field material study with controlled crop and depth.', 'framing', 4, 'close', 'crop', CURATED_LOOK.close, CURATED_MOTION.close),
+  wide: scene('wide', 'Wide', 'cosmic landscape', 'A small subject inside a broad stellar environment; scale matters more than glow.', 'framing', 6, 'wide', 'caption', CURATED_LOOK.wide, CURATED_MOTION.wide),
+  polar: scene('polar', 'Orbital', 'circular calm', 'Pulled-back polar geometry with low turbulence, almost no streak and quiet circular balance.', 'framing', 8, 'orbital', 'orbit', CURATED_LOOK.polar, CURATED_MOTION.polar),
 
   // Hidden v7 compatibility definitions. Observation views now live in Custom.
   edge: scene('edge', 'Edge-on', 'thin disk', 'Legacy observation preset.', 'observation', 1, 'cinematic', 'horizon'),
