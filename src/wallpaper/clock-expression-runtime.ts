@@ -53,14 +53,18 @@ function resolve(s: Stored) {
     : validPreset(s.scenePreset) ? s.scenePreset : 'signature'
   const preset = SCENE_PRESETS[presetId]
   const comp = COMPOSITIONS[preset.composition]
+  const director = VIEW_DIRECTORS[preset.view]
   return {
     preset,
     framing: custom ? .72 + n(c.framing, .5) * .56 : 1,
     roll: comp.roll + (custom ? (n(c.roll, .5) - .5) * 30 : 0),
     tilt: custom ? n(c.tilt, .5) : .5,
     zoom: custom ? n(c.zoom, .5) : .5,
-    drift: custom ? n(c.drift, .46) : .46,
-    parallax: custom ? n(c.parallax, .52) : .52,
+    azimRate: custom
+      ? (.006 + n(c.drift, .46) * .03) * director.motion
+      : .006 + preset.motion.drift * .03,
+    parallax: custom ? n(c.parallax, .52) : preset.motion.parallax,
+    breath: custom ? .5 : .5 * preset.motion.breath,
     compDist: comp.dist,
   }
 }
@@ -194,6 +198,7 @@ let stored: Stored = readStored()
 let lastRead = 0
 let last = performance.now()
 let azim = .6
+let clock = 0
 let ptxT = 0, ptyT = 0, ptx = 0, pty = 0
 const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
@@ -206,6 +211,7 @@ function tick(now: number) {
   requestAnimationFrame(tick)
   const dt = Math.min(now - last, 50)
   last = now
+  clock += dt / 1000
   if (now - lastRead > 120) {
     stored = readStored()
     lastRead = now
@@ -247,9 +253,9 @@ function tick(now: number) {
   const damp = 1 - Math.exp(-dt / 1000 * 3.2)
   ptx += (ptxT - ptx) * damp
   pty += (ptyT - pty) * damp
-  azim += dt / 1000 * (.006 + R.drift * .03) * V.motion
+  azim += dt / 1000 * R.azimRate
   const dist = P.dist * R.compDist * R.framing * V.framing * (1.35 - .7 * R.zoom)
-  const incl = clamp(P.incl + (R.tilt - .5) * 20 + pty * 2.6 * R.parallax, 12, 89.8)
+  const incl = clamp(P.incl + (R.tilt - .5) * 20 + Math.sin(clock * .18) * R.breath + pty * 2.6 * R.parallax, 12, 89.8)
   const cam = cameraFrom(dist, incl, azim + ptx * .07 * R.parallax, P.fov)
   const portrait = w < h
   const basis = rollBasis(cam.right as V3, cam.up as V3, (R.roll + V.roll) * (portrait ? .72 : 1))
