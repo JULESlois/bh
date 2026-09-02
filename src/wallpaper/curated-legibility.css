@@ -1,0 +1,55 @@
+/* Final readability pass for curated presets.
+ * Artistic hierarchy may change scale, width, opacity and position, but HH/MM
+ * share one orientation. Dates are placed independently after collision solving. */
+
+.wp-clock[data-curated='on'][data-parallel-time='on'] .hour,
+.wp-clock[data-curated='on'][data-parallel-time='on'] .minute {
+  --art-rot: var(--parallel-rot, 0deg) !important;
+}
+
+/* Terminal keeps geometry-coupled Doppler width/weight/brightness, but not a
+ * separate per-glyph rotation: the pair remains parallel to the disk axis. */
+.wp-clock[data-curated='on'][data-parallel-time='on'] .hour,
+.wp-clock[data-curated='on'][data-parallel-time='on'] .minute {
+  rotate: 0deg !important;
+}
+.wp-clock[data-curated='on'][data-preset='terminal'][data-parallel-time='on'] .hour,
+.wp-clock[data-curated='on'][data-preset='terminal'][data-parallel-time='on'] .minute {
+  translate: var(--geo-shift-x, 0px) var(--geo-shift-y, 0px);
+  scale: var(--geo-scale-x, 1) var(--geo-scale-y, 1);
+  font-weight: var(--geo-weight, 210);
+}
+
+/* Date position is no longer derived from the seconds/meta anchor. This rule
+ * intentionally overrides engine-specific date offsets and rotations around the
+ * disk. The runtime solves --date-x/y from the final visible HH/MM bounds. */
+.wp-clock[data-curated='on'][data-date-fit='placed'] .d {
+  position: absolute !important;
+  left: var(--date-x) !important;
+  top: var(--date-y) !important;
+  margin: 0 !important;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--date-art-rot, 0deg)) !important;
+  transform-origin: center !important;
+}
+
+/* On an exceptionally cramped viewport it is preferable to omit the secondary
+ * date annotation rather than let it collide with the primary time. */
+.wp-clock[data-curated='on'][data-date-fit='hidden'] .d {
+  display: none !important;
+}
+
+/* Eclipse keeps the shadow-as-punctuation idea, but the date is now free to
+ * leave the shadow if the HH/MM pair or seconds consume that space. */
+.wp-clock[data-curated-blueprint='shadow-punctuation'][data-date-fit='placed'] .d {
+  left: var(--date-x) !important;
+  top: var(--date-y) !important;
+}
+
+@media (max-width: 680px) {
+  .wp-clock[data-curated='on'][data-parallel-time='on'] .hour,
+  .wp-clock[data-curated='on'][data-parallel-time='on'] .minute {
+    --parallel-rot: 0deg !important;
+  }
+}
