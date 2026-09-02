@@ -1,16 +1,20 @@
-/* Research-driven curated composition layer.
- * Preset mode is treated as eight finished posters. The generic engine still
- * computes live black-hole geometry, but this layer owns final HH/MM anchors.
- * Custom mode never receives these overrides. */
+/* Curated typography is part of the scene, not a second HUD layer.
+ * HH/MM are solved as one cluster by curated-layout-runtime.ts. Visual variety
+ * now comes from scene geometry, scale hierarchy and negative-space anchoring,
+ * not from scattering or independently rotating the two number groups. */
 
 .wp-clock[data-curated='on'] {
-  --curated-type: rgba(244, 244, 242, .94);
+  --curated-type: rgba(244, 244, 242, .92);
   color: var(--curated-type);
 }
 
-/* Presets use their own controlled transforms. Geometry-expression remains
- * available in Custom; only Terminal keeps the Doppler deformation because it
- * is a deliberate part of that composition. */
+.wp-clock[data-curated='on'] .sbar {
+  display: none !important;
+}
+
+/* Presets keep the geometry-expression width/weight response only where it has
+ * physical meaning. Per-glyph rotation is suppressed: the complete pair reads
+ * as one object. */
 .wp-clock[data-curated='on']:not([data-preset='terminal']) .hour,
 .wp-clock[data-curated='on']:not([data-preset='terminal']) .minute {
   translate: 0 0;
@@ -21,13 +25,13 @@
 .wp-clock[data-curated='on'][data-preset='terminal'] .hour,
 .wp-clock[data-curated='on'][data-preset='terminal'] .minute {
   translate: var(--geo-shift-x, 0px) var(--geo-shift-y, 0px);
-  rotate: var(--geo-rotate, 0deg);
+  rotate: 0deg;
   scale: var(--geo-scale-x, 1) var(--geo-scale-y, 1);
   font-weight: var(--geo-weight, 210);
 }
 
-/* Quiet normally uses the legacy compact block. Void becomes a real poster
- * composition, so it uses the same viewport-coordinate model as other engines. */
+/* Quiet normally uses a compact flex block. Void is still a viewport poster,
+ * but its time is now one small caption cluster rather than two floating labels. */
 .wp-clock.adaptive[data-curated='on'][data-preset='void'] {
   inset: 0 !important;
   left: 0 !important;
@@ -60,177 +64,166 @@
 .wp-clock.adaptive[data-curated='on'][data-preset='void'] .t i {
   position: absolute;
 }
-.wp-clock.adaptive[data-curated='on'][data-preset='void'] .hour {
-  left: var(--hour-x); top: var(--hour-y);
-  transform: translate(-50%, -50%) rotate(var(--art-rot, 0deg)) scale(var(--art-scale, 1)) scaleX(var(--art-xscale, 1));
+.wp-clock.adaptive[data-curated='on'][data-preset='void'] .hour,
+.wp-clock.adaptive[data-curated='on'][data-preset='void'] .minute {
+  left: var(--hour-x);
+  top: var(--hour-y);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--art-rot, 0deg))
+    scale(var(--art-scale, 1))
+    scaleX(var(--art-xscale, 1));
 }
 .wp-clock.adaptive[data-curated='on'][data-preset='void'] .minute {
-  left: var(--minute-x); top: var(--minute-y);
-  transform: translate(-50%, -50%) rotate(var(--art-rot, 0deg)) scale(var(--art-scale, 1)) scaleX(var(--art-xscale, 1));
+  left: var(--minute-x);
+  top: var(--minute-y);
 }
 .wp-clock.adaptive[data-curated='on'][data-preset='void'] .t i {
-  left: var(--meta-x); top: var(--meta-y);
+  left: var(--meta-x);
+  top: var(--meta-y);
   transform: translate(-50%, -50%);
   font-size: .10em;
 }
 .wp-clock.adaptive[data-curated='on'][data-preset='void'] .d {
   position: absolute;
-  left: var(--meta-x); top: var(--meta-y);
+  left: var(--meta-x);
+  top: var(--meta-y);
   margin: 0;
-  transform: translate(-50%, -50%) translate(var(--date-art-x, 0), var(--date-art-y, 0)) rotate(var(--date-art-rot, 0deg));
-}
-.wp-clock.adaptive[data-curated='on'][data-preset='void'] .sbar { display: none; }
-
-/* Signature / Poster Bracket ------------------------------------------------ */
-.wp-clock[data-curated-blueprint='poster-bracket'] .hour {
-  font-weight: 185;
-  letter-spacing: -.065em;
-  text-shadow: 0 2px 26px rgba(0,0,0,.44);
-}
-.wp-clock[data-curated-blueprint='poster-bracket'] .minute {
-  font-weight: 245;
-  letter-spacing: .015em;
-  opacity: .90;
-}
-.wp-clock[data-curated-blueprint='poster-bracket'] .d {
-  letter-spacing: .32em;
-  opacity: .52;
-}
-.wp-clock[data-curated-blueprint='poster-bracket'] .sbar {
-  width: min(11vw, 170px);
-  opacity: .24;
+  transform: translate(-50%, -50%);
 }
 
-/* Horizon / Split Tension --------------------------------------------------- */
-.wp-clock[data-curated-blueprint='horizon-tension'] .hour {
-  font-weight: 180;
-  letter-spacing: .11em;
-  opacity: .74;
-}
-.wp-clock[data-curated-blueprint='horizon-tension'] .minute {
-  font-weight: 248;
-  letter-spacing: .02em;
-}
-.wp-clock[data-curated-blueprint='horizon-tension'] .sbar { display: none; }
-.wp-clock[data-curated-blueprint='horizon-tension'] .d {
-  letter-spacing: .38em;
-  opacity: .46;
-}
-
-/* Terminal / Diagonal Doppler ---------------------------------------------- */
-.wp-clock[data-curated-blueprint='diagonal-doppler'] .hour,
-.wp-clock[data-curated-blueprint='diagonal-doppler'] .minute {
-  transition: opacity .25s linear, filter .25s linear;
-}
-.wp-clock[data-curated-blueprint='diagonal-doppler'] .hour { letter-spacing: -.01em; }
-.wp-clock[data-curated-blueprint='diagonal-doppler'] .minute { letter-spacing: .12em; opacity: .76; }
-.wp-clock[data-curated-blueprint='diagonal-doppler'] .d {
-  font-size: clamp(7px, .58vw, 9px);
-  letter-spacing: .42em;
-  opacity: .38;
-}
-.wp-clock[data-curated-blueprint='diagonal-doppler'] .sbar::before { opacity: .12; }
-
-/* Eclipse / Shadow Punctuation --------------------------------------------- */
-.wp-clock[data-curated-blueprint='shadow-punctuation'] .hour,
-.wp-clock[data-curated-blueprint='shadow-punctuation'] .minute {
-  font-weight: 195;
-  letter-spacing: -.015em;
-  text-shadow: 0 2px 18px rgba(0,0,0,.38);
-}
-.wp-clock[data-curated-blueprint='shadow-punctuation'] .d {
-  left: var(--hole-x);
-  top: var(--hole-y);
-  transform: translate(-50%, -50%) translate(var(--date-art-x, 0), var(--date-art-y, 0));
-  font-size: clamp(8px, .62vw, 10px);
-  letter-spacing: .36em;
-  opacity: .56;
-}
-.wp-clock[data-curated-blueprint='shadow-punctuation'] .t i {
-  left: var(--hole-x);
-  top: calc(var(--hole-y) - .85rem);
-  opacity: .44;
-}
-
-/* Void / Editorial Index --------------------------------------------------- */
-.wp-clock[data-curated-blueprint='void-index'] .t {
-  font-weight: 178;
-  letter-spacing: .08em;
-  color: rgba(238,239,238,.80);
-}
-.wp-clock[data-curated-blueprint='void-index'] .minute { opacity: .56; }
-.wp-clock[data-curated-blueprint='void-index'] .d {
+/* Shared metadata language ------------------------------------------------- */
+.wp-clock[data-curated='on'] .d {
   font-size: clamp(7px, .55vw, 9px);
-  letter-spacing: .34em;
+  letter-spacing: .24em;
+  opacity: .46;
+  white-space: nowrap;
+}
+.wp-clock[data-curated='on'] .t i {
   opacity: .34;
-  transform-origin: center;
+  letter-spacing: .18em;
 }
-.wp-clock[data-curated-blueprint='void-index'] .t i { opacity: .30; }
 
-/* Close / Parallax Crop ----------------------------------------------------- */
-.wp-clock[data-curated-blueprint='parallax-crop'] .hour {
-  letter-spacing: .09em;
-  text-shadow: none;
+/* Signature — one editorial hero cluster in the large dark counter-space. */
+.wp-clock[data-curated-blueprint='hero-cluster'] .hour {
+  font-weight: 185;
+  letter-spacing: -.055em;
+  text-shadow: 0 2px 24px rgba(0,0,0,.52);
 }
-.wp-clock[data-curated-blueprint='parallax-crop'] .minute {
-  font-weight: 260;
-  letter-spacing: -.045em;
-  text-shadow: 0 3px 28px rgba(0,0,0,.64);
+.wp-clock[data-curated-blueprint='hero-cluster'] .minute {
+  font-weight: 255;
+  letter-spacing: -.015em;
+  opacity: .90;
+  text-shadow: 0 2px 22px rgba(0,0,0,.44);
 }
-.wp-clock[data-curated-blueprint='parallax-crop'] .d { opacity: .40; letter-spacing: .30em; }
-.wp-clock[data-curated-blueprint='parallax-crop'] .sbar { opacity: .18; width: min(12vw, 150px); }
+.wp-clock[data-curated-blueprint='hero-cluster'] .d {
+  opacity: .50;
+  letter-spacing: .28em;
+}
 
-/* Wide / Panorama Split ----------------------------------------------------- */
-.wp-clock[data-curated-blueprint='panorama-split'] .hour,
-.wp-clock[data-curated-blueprint='panorama-split'] .minute {
+/* Horizon — a compact line riding the projected disk direction, but placed in
+ * the dark field rather than split across both ends of the luminous blade. */
+.wp-clock[data-curated-blueprint='axis-caption'] .hour,
+.wp-clock[data-curated-blueprint='axis-caption'] .minute {
+  font-weight: 205;
+  letter-spacing: .035em;
+  text-shadow: 0 2px 20px rgba(0,0,0,.54);
+}
+.wp-clock[data-curated-blueprint='axis-caption'] .hour { opacity: .76; }
+.wp-clock[data-curated-blueprint='axis-caption'] .d { opacity: .42; }
+
+/* Terminal — same cluster grammar, with physically signed Doppler width/weight
+ * retained. The text occupies the quiet wedge above the knife-edge disk. */
+.wp-clock[data-curated-blueprint='doppler-caption'] .hour,
+.wp-clock[data-curated-blueprint='doppler-caption'] .minute {
+  transition: opacity .20s linear, filter .20s linear;
+  text-shadow: 0 2px 24px rgba(0,0,0,.58);
+}
+.wp-clock[data-curated-blueprint='doppler-caption'] .hour { letter-spacing: -.015em; }
+.wp-clock[data-curated-blueprint='doppler-caption'] .minute { letter-spacing: .055em; }
+.wp-clock[data-curated-blueprint='doppler-caption'] .d {
+  opacity: .36;
+  letter-spacing: .30em;
+}
+
+/* Eclipse — the black shadow is the text panel. Keeping the complete pair in
+ * the shadow lets the photon ring remain the only bright circular graphic. */
+.wp-clock[data-curated-blueprint='shadow-title'] .hour,
+.wp-clock[data-curated-blueprint='shadow-title'] .minute {
   font-weight: 188;
-  letter-spacing: -.035em;
-  text-shadow: 0 2px 22px rgba(0,0,0,.32);
+  letter-spacing: -.02em;
+  text-shadow: 0 2px 16px rgba(0,0,0,.30);
 }
-.wp-clock[data-curated-blueprint='panorama-split'] .minute { opacity: .88; }
-.wp-clock[data-curated-blueprint='panorama-split'] .d {
-  letter-spacing: .38em;
-  opacity: .40;
+.wp-clock[data-curated-blueprint='shadow-title'] .d {
+  opacity: .50;
+  letter-spacing: .26em;
 }
-.wp-clock[data-curated-blueprint='panorama-split'] .sbar { display: none; }
+.wp-clock[data-curated-blueprint='shadow-title'] .t i { opacity: .28; }
 
-/* Orbital / Constellation --------------------------------------------------- */
-.wp-clock[data-curated-blueprint='orbital-constellation'] .hour,
-.wp-clock[data-curated-blueprint='orbital-constellation'] .minute {
-  font-weight: 182;
+/* Void — deliberately small. The lensed sky remains the artwork. */
+.wp-clock[data-curated-blueprint='void-caption'] .t {
+  font-weight: 176;
+  letter-spacing: .045em;
+  color: rgba(238,239,238,.78);
+}
+.wp-clock[data-curated-blueprint='void-caption'] .minute { opacity: .56; }
+.wp-clock[data-curated-blueprint='void-caption'] .d {
+  opacity: .30;
+  letter-spacing: .24em;
+}
+.wp-clock[data-curated-blueprint='void-caption'] .t i { opacity: .24; }
+
+/* Close Pass — background energy is extreme, so the time moves into the dark
+ * shadow instead of competing with the brightest material flow. */
+.wp-clock[data-curated-blueprint='shadow-overlay'] .hour,
+.wp-clock[data-curated-blueprint='shadow-overlay'] .minute {
+  font-weight: 205;
   letter-spacing: -.025em;
+  text-shadow: 0 2px 22px rgba(0,0,0,.48);
 }
-.wp-clock[data-curated-blueprint='orbital-constellation']::before {
-  border-color: rgba(232,228,220,.075);
-  border-left-color: transparent;
-  border-bottom-color: transparent;
-  opacity: .38;
-  transform: rotate(-42deg);
-}
-.wp-clock[data-curated-blueprint='orbital-constellation']::after {
-  width: 3px;
-  height: 3px;
-  opacity: .70;
-  box-shadow: 0 0 6px var(--acc), 0 0 12px var(--acc);
-}
-.wp-clock[data-curated-blueprint='orbital-constellation'] .d {
-  letter-spacing: .34em;
-  opacity: .42;
-}
-.wp-clock[data-curated-blueprint='orbital-constellation'] .t i { opacity: .38; }
+.wp-clock[data-curated-blueprint='shadow-overlay'] .hour { opacity: .82; }
+.wp-clock[data-curated-blueprint='shadow-overlay'] .d { opacity: .42; }
 
-/* Aspect-ratio grammar. These are deliberate re-compositions, not simple
- * scaling. Controlled crop is only used on wide screens where edge tension has
- * room to read as intentional. */
-.wp-clock[data-curated='on'][data-curated-aspect='ultra'] .d { font-size: clamp(8px, .46vw, 10px); }
-.wp-clock[data-curated='on'][data-curated-aspect='portrait'] .d { letter-spacing: .24em; }
-.wp-clock[data-curated='on'][data-curated-aspect='portrait'] .sbar { display: none; }
-.wp-clock[data-curated='on'][data-curated-aspect='portrait'] .t i { opacity: .30; }
+/* Wide — typography is a caption, not a second subject. */
+.wp-clock[data-curated-blueprint='landscape-caption'] .hour,
+.wp-clock[data-curated-blueprint='landscape-caption'] .minute {
+  font-weight: 182;
+  letter-spacing: -.02em;
+  opacity: .80;
+  text-shadow: 0 2px 18px rgba(0,0,0,.40);
+}
+.wp-clock[data-curated-blueprint='landscape-caption'] .d {
+  opacity: .34;
+  letter-spacing: .26em;
+}
+
+/* Orbital — remove the synthetic orbit arc/dot. The physical circular disk is
+ * already the strongest geometry; adding another circle created a watch face. */
+.wp-clock[data-curated-blueprint='tangent-title'] .hour,
+.wp-clock[data-curated-blueprint='tangent-title'] .minute {
+  font-weight: 180;
+  letter-spacing: -.018em;
+  text-shadow: 0 2px 16px rgba(0,0,0,.32);
+}
+.wp-clock[data-curated-blueprint='tangent-title']::before,
+.wp-clock[data-curated-blueprint='tangent-title']::after {
+  display: none !important;
+}
+.wp-clock[data-curated-blueprint='tangent-title'] .d {
+  opacity: .38;
+  letter-spacing: .24em;
+}
+.wp-clock[data-curated-blueprint='tangent-title'] .t i { opacity: .26; }
+
+/* Ratio adaptations are intentionally conservative. The cluster solver already
+ * re-composes anchors; CSS only reduces secondary noise on narrow screens. */
+.wp-clock[data-curated='on'][data-curated-aspect='portrait'] .d { letter-spacing: .18em; }
+.wp-clock[data-curated='on'][data-curated-aspect='portrait'] .t i { opacity: .24; }
 
 @media (max-width: 680px) {
-  .wp-clock[data-curated='on'] .d { font-size: 8px; }
-  .wp-clock[data-curated-blueprint='diagonal-doppler'] .d,
-  .wp-clock[data-curated-blueprint='horizon-tension'] .d { display: none; }
+  .wp-clock[data-curated='on'] .d { font-size: 7px; }
+  .wp-clock[data-curated-blueprint='axis-caption'] .d,
+  .wp-clock[data-curated-blueprint='doppler-caption'] .d { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
