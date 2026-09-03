@@ -15,6 +15,12 @@ type Art = {
   opacity?: number
   blur?: number
 }
+type OcclusionMode = 'none' | 'axis-slice' | 'ring-cut' | 'shadow-swallow'
+type OcclusionSpec = {
+  mode: OcclusionMode
+  strength: number
+  radius?: number
+}
 
 type LayoutCtx = {
   node: HTMLElement
@@ -34,10 +40,23 @@ type LayoutCtx = {
 }
 
 const CURATED = new Set(['signature', 'horizon', 'terminal', 'centered', 'void', 'close', 'wide', 'polar'])
+const OCCLUSION: Record<string, OcclusionSpec> = {
+  signature: { mode: 'none', strength: 0 },
+  horizon:   { mode: 'axis-slice', strength: .62 },
+  terminal:  { mode: 'axis-slice', strength: .92 },
+  centered:  { mode: 'ring-cut', strength: .82, radius: .96 },
+  void:      { mode: 'none', strength: 0 },
+  close:     { mode: 'shadow-swallow', strength: .82, radius: .86 },
+  wide:      { mode: 'none', strength: 0 },
+  polar:     { mode: 'ring-cut', strength: .54, radius: .94 },
+}
 const ROOT_VARS = [
   '--date-art-x', '--date-art-y', '--date-art-rot', '--meta-art-x', '--meta-art-y', '--meta-art-rot',
   '--blade-width', '--blade-span', '--orbit-r', '--orbit-d', '--orbit-dot-x', '--orbit-dot-y',
   '--seconds-x', '--seconds-y',
+  '--occ-angle', '--occ-stop', '--occ-band', '--occ-feather',
+  '--occ-x', '--occ-y', '--occ-ring-r', '--occ-ring-w', '--occ-ring-feather',
+  '--occ-shadow-r', '--occ-shadow-feather',
 ]
 const GLYPH_VARS = ['--art-scale', '--art-xscale', '--art-rot', '--art-x', '--art-y', '--art-opacity', '--art-blur']
 
@@ -65,6 +84,16 @@ const normalOf = (axis: V2): V2 => [-axis[1], axis[0]]
 const dot = (a: V2, b: V2) => a[0] * b[0] + a[1] * b[1]
 const sub = (a: Point, b: Point): V2 => [a.x - b.x, a.y - b.y]
 const add = (p: Point, v: V2, amount: number): Point => ({ x: p.x + v[0] * amount, y: p.y + v[1] * amount })
+
+function upperNormal(normal: V2): V2 {
+  return normal[1] <= 0 ? normal : [-normal[0], -normal[1]]
+}
+
+function pointOnAxisAtX(hole: Point, axis: V2, targetX: number): Point {
+  if (Math.abs(axis[0]) < .08) return { x: hole.x, y: hole.y }
+  const t = (targetX - hole.x) / axis[0]
+  return { x: targetX, y: hole.y + axis[1] * t }
+}
 
 function applyArt(el: HTMLElement | null, art: Art) {
   if (!el) return
@@ -97,10 +126,60 @@ function setMeta(node: HTMLElement, p: Point, w: number, h: number, safe: number
   node.style.setProperty('--meta-art-rot', '0deg')
 }
 
+function configureOcclusion(ctx: LayoutCtx, preset: string) {
+  const spec = OCCLUSION[preset] ?? OCCLUSION.signature
+  const { node, hole, normal, shadowR, engineSize, w, h } = ctx
+  node.dataset.occlusion = spec.mode
+  setPx(node, '--occ-x', hole.x)
+  setPx(node, '--occ-y', hole.y)
+
+  if (spec.mode === 'none') return
+
+  if (spec.mode === 'axis-slice') {
+    const projections = [
+      0,
+      w * normal[0],
+      h * normal[1],
+      w * normal[0] + h * normal[1],
+    ]
+    const minProjection = Math.min(...projections)
+    const maxProjection = Math.max(...projections)
+    const range = Math.max(maxProjection - minProjection, 1)
+    const holeProjection = hole.x * normal[0] + hole.y * normal[1]
+    const stop = clamp((holeProjection - minProjection) / range * 100, 0, 100)
+    const bandPx = clamp(engineSize * (.075 + spec.strength * .13), 5, 22)
+    const featherPx = clamp(bandPx * .48, 2.5, 8)
+    let angle = Math.atan2(normal[0], -normal[1]) * 180 / Math.PI
+    if (angle < 0) angle += 360
+
+    node.style.setProperty('--occ-angle', `${angle.toFixed(2)}deg`)
+    node.style.setProperty('--occ-stop', `${stop.toFixed(3)}%`)
+    node.style.setProperty('--occ-band', `${(bandPx / range * 100).toFixed(3)}%`)
+    node.style.setProperty('--occ-feather', `${(featherPx / range * 100).toFixed(3)}%`)
+    return
+  }
+
+  if (spec.mode === 'ring-cut') {
+    const ringR = shadowR * (spec.radius ?? .96)
+    const ringW = clamp(engineSize * (.05 + spec.strength * .065), 4, 14)
+    const feather = clamp(ringW * .50, 2, 6)
+    setPx(node, '--occ-ring-r', ringR)
+    setPx(node, '--occ-ring-w', ringW)
+    setPx(node, '--occ-ring-feather', feather)
+    return
+  }
+
+  const swallowR = shadowR * (spec.radius ?? .86)
+  const swallowFeather = clamp(engineSize * (.08 + spec.strength * .06), 5, 16)
+  setPx(node, '--occ-shadow-r', swallowR)
+  setPx(node, '--occ-shadow-feather', swallowFeather)
+}
+
 function resetCurated(node: HTMLElement) {
   delete node.dataset.curated
   delete node.dataset.curatedBlueprint
   delete node.dataset.curatedAspect
+  delete node.dataset.occlusion
   for (const name of ROOT_VARS) node.style.removeProperty(name)
   for (const el of Array.from(node.querySelectorAll<HTMLElement>('.hour,.minute'))) {
     for (const name of GLYPH_VARS) el.style.removeProperty(name)
@@ -183,9 +262,13 @@ function layoutSignature(ctx: LayoutCtx) {
 function layoutHorizon(ctx: LayoutCtx) {
   const { hole, axis, normal, w, h, engineSize, portrait } = ctx
   const subjectRight = hole.x >= w * .5
-  const anchor = {
-    x: subjectRight ? w * .25 : w * .73,
-    y: hole.y > h * .50 ? h * .30 : h * .70,
+  let anchor: Point
+  if (portrait) {
+    anchor = { x: subjectRight ? w * .30 : w * .70, y: hole.y > h * .50 ? h * .30 : h * .70 }
+  } else {
+    const targetX = subjectRight ? w * .24 : w * .76
+    const linePoint = pointOnAxisAtX(hole, axis, targetX)
+    anchor = add(linePoint, upperNormal(normal), engineSize * .13)
   }
   const cluster = inlineCluster(
     ctx,
@@ -202,9 +285,13 @@ function layoutHorizon(ctx: LayoutCtx) {
 function layoutTerminal(ctx: LayoutCtx) {
   const { hole, axis, normal, w, h, engineSize, portrait } = ctx
   const subjectRight = hole.x >= w * .5
-  const anchor = {
-    x: subjectRight ? w * .29 : w * .71,
-    y: hole.y > h * .52 ? h * .26 : h * .72,
+  let anchor: Point
+  if (portrait) {
+    anchor = { x: subjectRight ? w * .32 : w * .68, y: hole.y > h * .52 ? h * .28 : h * .72 }
+  } else {
+    const targetX = subjectRight ? w * .30 : w * .70
+    const linePoint = pointOnAxisAtX(hole, axis, targetX)
+    anchor = add(linePoint, upperNormal(normal), engineSize * .055)
   }
   const cluster = inlineCluster(
     ctx,
@@ -222,11 +309,14 @@ function layoutEclipse(ctx: LayoutCtx) {
   const { hole, shadowR, engineSize, portrait } = ctx
   const cluster = inlineCluster(
     ctx,
-    { x: hole.x, y: hole.y - shadowR * (portrait ? .05 : .07) },
+    {
+      x: hole.x + shadowR * (portrait ? .28 : .43),
+      y: hole.y - shadowR * (portrait ? .02 : .04),
+    },
     [1, 0],
-    { scale: portrait ? .64 : .70, xscale: .96 },
-    { scale: portrait ? .64 : .70, xscale: .96 },
-    engineSize * .16,
+    { scale: portrait ? .68 : .76, xscale: .96 },
+    { scale: portrait ? .68 : .76, xscale: .96 },
+    engineSize * .14,
   )
   setMeta(
     ctx.node,
@@ -255,14 +345,18 @@ function layoutVoid(ctx: LayoutCtx) {
 }
 
 function layoutClose(ctx: LayoutCtx) {
-  const { hole, shadowR, engineSize, portrait } = ctx
+  const { hole, shadowR, engineSize, portrait, w } = ctx
+  const outward = hole.x >= w * .5 ? -1 : 1
   const cluster = inlineCluster(
     ctx,
-    { x: hole.x - shadowR * .04, y: hole.y + shadowR * (portrait ? .10 : .07) },
+    {
+      x: hole.x + shadowR * (portrait ? .48 : .62) * outward,
+      y: hole.y + shadowR * (portrait ? .04 : .07),
+    },
     [1, 0],
-    { scale: portrait ? .66 : .72, xscale: .98, opacity: .82, blur: .12 },
-    { scale: portrait ? .76 : .82, xscale: .94 },
-    engineSize * .18,
+    { scale: portrait ? .68 : .74, xscale: .98, opacity: .80, blur: .10 },
+    { scale: portrait ? .78 : .86, xscale: .94 },
+    engineSize * .16,
   )
   setMeta(
     ctx.node,
@@ -291,26 +385,22 @@ function layoutWide(ctx: LayoutCtx) {
 
 function layoutOrbital(ctx: LayoutCtx) {
   const { hole, shadowR, engineSize, portrait } = ctx
-  // Keep the type in the dark core, but deliberately offset the complete line
-  // away from the geometric centre so the scene reads as a poster, not a watch face.
   const cluster = inlineCluster(
     ctx,
     {
-      x: hole.x - shadowR * (portrait ? .08 : .15),
-      y: hole.y + shadowR * (portrait ? .18 : .20),
+      x: hole.x - shadowR * (portrait ? .34 : .48),
+      y: hole.y + shadowR * (portrait ? .10 : .11),
     },
     [1, 0],
-    { scale: portrait ? .56 : .60, xscale: .97 },
-    { scale: portrait ? .56 : .60, xscale: .97 },
-    engineSize * .15,
+    { scale: portrait ? .58 : .64, xscale: .97 },
+    { scale: portrait ? .58 : .64, xscale: .97 },
+    engineSize * .14,
   )
   setMeta(
     ctx.node,
     { x: cluster.center.x, y: cluster.center.y + Math.max(engineSize * .42, cluster.maxH * .72) },
     ctx.w, ctx.h, ctx.safe,
   )
-  // The physical accretion ring already provides circular structure. Extra UI
-  // orbit geometry is intentionally suppressed by curated-layout.css.
   setPx(ctx.node, '--orbit-r', Math.max(shadowR * .72, 42))
   setPx(ctx.node, '--orbit-d', Math.max(shadowR * 1.44, 84))
 }
@@ -364,6 +454,8 @@ function tick(now: number) {
   else if (preset === 'close') { node.dataset.curatedBlueprint = 'shadow-overlay'; layoutClose(ctx) }
   else if (preset === 'wide') { node.dataset.curatedBlueprint = 'landscape-caption'; layoutWide(ctx) }
   else { node.dataset.curatedBlueprint = 'tangent-title'; layoutOrbital(ctx) }
+
+  configureOcclusion(ctx, preset)
 }
 
 requestAnimationFrame(tick)
