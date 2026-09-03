@@ -1,7 +1,7 @@
 /* Curated typography is part of the scene, not a second HUD layer.
  * HH/MM are solved as one cluster by curated-layout-runtime.ts. Visual variety
- * now comes from scene geometry, scale hierarchy and negative-space anchoring,
- * not from scattering or independently rotating the two number groups. */
+ * now comes from scene geometry, scale hierarchy, negative-space anchoring and
+ * controlled occlusion by the physical subject. */
 
 .wp-clock[data-curated='on'] {
   --curated-type: rgba(244, 244, 242, .92);
@@ -28,6 +28,93 @@
   rotate: 0deg;
   scale: var(--geo-scale-x, 1) var(--geo-scale-y, 1);
   font-weight: var(--geo-weight, 210);
+}
+
+/* -------------------------------------------------------------------------
+ * Scene occlusion grammar
+ * -------------------------------------------------------------------------
+ * The clock stays a single live DOM layer, but the fullscreen .depth-time
+ * receives a viewport-space mask that follows the actual projected black-hole
+ * geometry. This lets parts of HH/MM sit visually behind the disk/shadow while
+ * the rest stays in front. Date remains outside this mask and stays readable.
+ */
+.wp-clock[data-curated='on'][data-occlusion]:not([data-occlusion='none']) .depth-time {
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+/* Edge-on scenes: the physical disk axis slices through the lower/central part
+ * of the type. Terminal uses the same mask with a wider band supplied by JS. */
+.wp-clock[data-curated='on'][data-occlusion='axis-slice'] .depth-time {
+  -webkit-mask-image: linear-gradient(
+    var(--occ-angle, 180deg),
+    #000 0%,
+    #000 calc(var(--occ-stop, 50%) - var(--occ-band, 1%)),
+    rgba(0,0,0,.22) calc(var(--occ-stop, 50%) - var(--occ-feather, .4%)),
+    rgba(0,0,0,.07) var(--occ-stop, 50%),
+    rgba(0,0,0,.22) calc(var(--occ-stop, 50%) + var(--occ-feather, .4%)),
+    #000 calc(var(--occ-stop, 50%) + var(--occ-band, 1%)),
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    var(--occ-angle, 180deg),
+    #000 0%,
+    #000 calc(var(--occ-stop, 50%) - var(--occ-band, 1%)),
+    rgba(0,0,0,.22) calc(var(--occ-stop, 50%) - var(--occ-feather, .4%)),
+    rgba(0,0,0,.07) var(--occ-stop, 50%),
+    rgba(0,0,0,.22) calc(var(--occ-stop, 50%) + var(--occ-feather, .4%)),
+    #000 calc(var(--occ-stop, 50%) + var(--occ-band, 1%)),
+    #000 100%
+  );
+}
+
+/* Eclipse / Orbital: a narrow annulus disappears where the photon-ring/shadow
+ * boundary crosses the type. The centre remains visible, avoiding a watch-face
+ * treatment while still giving the ring real foreground authority. */
+.wp-clock[data-curated='on'][data-occlusion='ring-cut'] .depth-time {
+  -webkit-mask-image: radial-gradient(
+    circle at var(--occ-x) var(--occ-y),
+    #000 0,
+    #000 calc(var(--occ-ring-r) - var(--occ-ring-w)),
+    rgba(0,0,0,.24) calc(var(--occ-ring-r) - var(--occ-ring-feather)),
+    rgba(0,0,0,.06) var(--occ-ring-r),
+    rgba(0,0,0,.24) calc(var(--occ-ring-r) + var(--occ-ring-feather)),
+    #000 calc(var(--occ-ring-r) + var(--occ-ring-w)),
+    #000 100%
+  );
+  mask-image: radial-gradient(
+    circle at var(--occ-x) var(--occ-y),
+    #000 0,
+    #000 calc(var(--occ-ring-r) - var(--occ-ring-w)),
+    rgba(0,0,0,.24) calc(var(--occ-ring-r) - var(--occ-ring-feather)),
+    rgba(0,0,0,.06) var(--occ-ring-r),
+    rgba(0,0,0,.24) calc(var(--occ-ring-r) + var(--occ-ring-feather)),
+    #000 calc(var(--occ-ring-r) + var(--occ-ring-w)),
+    #000 100%
+  );
+}
+
+/* Close Pass: a larger part of the cluster is swallowed by the dark core. The
+ * surviving outer portion reads as if it emerges from behind the black hole. */
+.wp-clock[data-curated='on'][data-occlusion='shadow-swallow'] .depth-time {
+  -webkit-mask-image: radial-gradient(
+    circle at var(--occ-x) var(--occ-y),
+    rgba(0,0,0,.05) 0,
+    rgba(0,0,0,.11) calc(var(--occ-shadow-r) - var(--occ-shadow-feather)),
+    rgba(0,0,0,.40) var(--occ-shadow-r),
+    #000 calc(var(--occ-shadow-r) + var(--occ-shadow-feather)),
+    #000 100%
+  );
+  mask-image: radial-gradient(
+    circle at var(--occ-x) var(--occ-y),
+    rgba(0,0,0,.05) 0,
+    rgba(0,0,0,.11) calc(var(--occ-shadow-r) - var(--occ-shadow-feather)),
+    rgba(0,0,0,.40) var(--occ-shadow-r),
+    #000 calc(var(--occ-shadow-r) + var(--occ-shadow-feather)),
+    #000 100%
+  );
 }
 
 /* Quiet normally uses a compact flex block. Void is still a viewport poster,
@@ -121,8 +208,9 @@
   letter-spacing: .28em;
 }
 
-/* Horizon — a compact line riding the projected disk direction, but placed in
- * the dark field rather than split across both ends of the luminous blade. */
+/* Horizon — a compact line that deliberately grazes the projected disk. The
+ * mask now lets the light blade become foreground rather than a line avoided by
+ * the typography. */
 .wp-clock[data-curated-blueprint='axis-caption'] .hour,
 .wp-clock[data-curated-blueprint='axis-caption'] .minute {
   font-weight: 205;
@@ -132,8 +220,8 @@
 .wp-clock[data-curated-blueprint='axis-caption'] .hour { opacity: .76; }
 .wp-clock[data-curated-blueprint='axis-caption'] .d { opacity: .42; }
 
-/* Terminal — same cluster grammar, with physically signed Doppler width/weight
- * retained. The text occupies the quiet wedge above the knife-edge disk. */
+/* Terminal — the disk cuts more deeply through the type while physically
+ * signed Doppler width/weight remains active. */
 .wp-clock[data-curated-blueprint='doppler-caption'] .hour,
 .wp-clock[data-curated-blueprint='doppler-caption'] .minute {
   transition: opacity .20s linear, filter .20s linear;
@@ -146,8 +234,8 @@
   letter-spacing: .30em;
 }
 
-/* Eclipse — the black shadow is the text panel. Keeping the complete pair in
- * the shadow lets the photon ring remain the only bright circular graphic. */
+/* Eclipse — the pair straddles the photon-ring boundary. The ring erases a thin
+ * slice of the glyphs instead of turning the shadow into a flat text panel. */
 .wp-clock[data-curated-blueprint='shadow-title'] .hour,
 .wp-clock[data-curated-blueprint='shadow-title'] .minute {
   font-weight: 188;
@@ -173,8 +261,8 @@
 }
 .wp-clock[data-curated-blueprint='void-caption'] .t i { opacity: .24; }
 
-/* Close Pass — background energy is extreme, so the time moves into the dark
- * shadow instead of competing with the brightest material flow. */
+/* Close Pass — the cluster crosses the shadow boundary, with its inner portion
+ * strongly suppressed and its outer portion left crisp. */
 .wp-clock[data-curated-blueprint='shadow-overlay'] .hour,
 .wp-clock[data-curated-blueprint='shadow-overlay'] .minute {
   font-weight: 205;
@@ -197,8 +285,8 @@
   letter-spacing: .26em;
 }
 
-/* Orbital — remove the synthetic orbit arc/dot. The physical circular disk is
- * already the strongest geometry; adding another circle created a watch face. */
+/* Orbital — no synthetic orbit UI. Instead the physical ring itself cuts the
+ * offset title, creating depth without reading like a watch face. */
 .wp-clock[data-curated-blueprint='tangent-title'] .hour,
 .wp-clock[data-curated-blueprint='tangent-title'] .minute {
   font-weight: 180;
